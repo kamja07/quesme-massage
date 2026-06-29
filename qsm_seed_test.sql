@@ -24,10 +24,12 @@ begin
     if not exists (select 1 from auth.users where email = em) then
       uid := gen_random_uuid();
       insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
-        email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
+        email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+        confirmation_token, recovery_token, email_change, email_change_token_new, reauthentication_token)
       values ('00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated', em,
         crypt('123456', gen_salt('bf')), now(), now(), now(),
-        '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb);
+        '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+        '', '', '', '', '');
       insert into auth.identities (id, provider_id, user_id, identity_data, provider,
         last_sign_in_at, created_at, updated_at)
       values (gen_random_uuid(), em, uid,
@@ -39,10 +41,12 @@ begin
     if not exists (select 1 from auth.users where email = em) then
       uid := gen_random_uuid();
       insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
-        email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
+        email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+        confirmation_token, recovery_token, email_change, email_change_token_new, reauthentication_token)
       values ('00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated', em,
         crypt('123456', gen_salt('bf')), now(), now(), now(),
-        '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb);
+        '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+        '', '', '', '', '');
       insert into auth.identities (id, provider_id, user_id, identity_data, provider,
         last_sign_in_at, created_at, updated_at)
       values (gen_random_uuid(), em, uid,
