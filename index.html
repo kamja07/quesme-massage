@@ -55,6 +55,19 @@
   .sheet .drow{display:flex; gap:10px; padding:11px 0; border-bottom:1px solid #f1f4f3; font-size:14px;}
   .sheet .drow .k{flex:0 0 80px; color:var(--muted);} .sheet .drow .v{flex:1; color:var(--ink); font-weight:600;}
   .sheet .cta{padding:14px 20px 0;}
+  .pcard .pstat{font-size:11px; color:var(--teal); font-weight:800; margin-top:3px;}
+  .gallery{position:relative; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; background:#000;}
+  .gslide{flex:0 0 100%; scroll-snap-align:center;}
+  .gslide img{width:100%; display:block; max-height:440px; object-fit:cover;}
+  .gcount{position:absolute; top:12px; left:14px; background:rgba(0,0,0,.55); color:#fff; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; z-index:2;}
+  .namebar{padding:15px 20px; text-align:center; position:relative;}
+  .namebar.pretty{background:#fff8e6;} .namebar.regular{background:var(--teal-l);}
+  .sheet .x{position:absolute; top:12px; right:14px; z-index:3; background:rgba(255,255,255,.85); width:30px; height:30px; border-radius:50%; line-height:1;}
+  .ratecard{margin:10px 20px 0; border:1px solid #eef3f1; border-radius:13px; overflow:hidden;}
+  .ratecard .rt{background:var(--teal-l); color:var(--teal); font-weight:800; font-size:13px; padding:9px 14px;}
+  .ratecard.pretty .rt{background:#fff3cd; color:#9a6a00;}
+  .rrow{display:flex; justify-content:space-between; align-items:center; padding:11px 14px; font-size:14px; border-top:1px solid #f1f4f3;}
+  .rrow b{color:var(--ink); font-size:15px;}
 </style>
 </head>
 <body>
@@ -89,21 +102,23 @@
   function t(k){ return I18N.t(lang,k); }
   function tn(k,n){ return I18N.t(lang,k).replace('{n}',n); }
   var esc=function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); };
-  var providers=[], shopMap={};
+  var providers=[], shopMap={}, services=[];
 
   window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} render(); };
   function shopName(slug){ var s=shopMap[slug]; if(!s) return ''; var n=s.names||{}; return n[lang]||n.en||n.ko||slug; }
   function shopArea(slug){ var s=shopMap[slug]; return s?(s.area||''):''; }
 
+  function photoOf(p){ return (p.photos && p.photos.length) ? p.photos[0] : (p.avatar||null); }
   function card(p){
     var ini=(p.name||'?').trim().charAt(0).toUpperCase();
-    var pic=p.avatar?'<img src="'+esc(p.avatar)+'">':esc(ini);
+    var ph=photoOf(p); var pic=ph?'<img src="'+esc(ph)+'">':esc(ini);
     var ty=p.tier==='pretty'?'pretty':'regular';
     var extra=p.price_extra>0?'<div class="pextra">'+tn('spa.extra',p.price_extra)+'</div>':'';
+    var stat=p.age?('<div class="pstat">'+p.age+'세'+(p.height?' · '+p.height+'cm':'')+(p.stats?' · '+esc(p.stats):'')+'</div>'):'';
     return '<div class="pcard '+ty+'" onclick="openDetail(\''+p.id+'\')">'+
       '<span class="ptier '+ty+'">'+t('spa.tier.'+ty)+'</span>'+
       '<div class="pic">'+pic+'</div><div class="pnm">'+esc(p.name)+'</div>'+
-      '<div class="pbio">'+esc(p.bio||shopName(p.store_slug))+'</div>'+extra+'</div>';
+      stat+'<div class="pbio">'+esc(p.bio||shopName(p.store_slug))+'</div>'+extra+'</div>';
   }
   function section(title, icon, arr){
     if(!arr.length) return '';
@@ -125,33 +140,55 @@
   window.openDetail=function(id){
     var p=providers.filter(function(x){return x.id===id;})[0]; if(!p) return;
     var ini=(p.name||'?').trim().charAt(0).toUpperCase();
-    var pic=p.avatar?'<img src="'+esc(p.avatar)+'">':esc(ini);
     var ty=p.tier==='pretty'?'pretty':'regular';
-    var tags='<span class="dtag '+ty+'">'+t('spa.tier.'+ty)+'</span>'+
-      (p.price_extra>0?'<span class="dtag extra">'+tn('spa.extra',p.price_extra)+'</span>':'')+
-      (p.outcall_ok?'<span class="dtag out">🚗 '+t('show.outcallOk')+'</span>':'')+
-      (p.freelance?'<span class="dtag free">프리랜서</span>':'');
+    var photos=(p.photos&&p.photos.length)?p.photos:[];
+    var top;
+    if(photos.length){
+      top='<div class="gallery">'+photos.map(function(u){return '<div class="gslide"><img src="'+esc(u)+'"></div>';}).join('')+'</div>'+
+        (photos.length>1?'<div class="gcount">1 / '+photos.length+'</div>':'')+
+        '<div class="namebar '+ty+'"><div class="dnm">'+esc(p.name)+'</div><div class="dtags">'+dtags(p,ty)+'</div></div>';
+    } else {
+      var pic=p.avatar?'<img src="'+esc(p.avatar)+'">':esc(ini);
+      top='<div class="hero '+ty+'"><div class="dpic">'+pic+'</div><div class="dnm">'+esc(p.name)+'</div><div class="dtags">'+dtags(p,ty)+'</div></div>';
+    }
     var sh=shopName(p.store_slug), ar=shopArea(p.store_slug);
+    var prof='';
+    if(p.age) prof+='<div class="drow"><span class="k">'+t('prof.age')+'</span><span class="v">'+p.age+'</span></div>';
+    if(p.height) prof+='<div class="drow"><span class="k">'+t('prof.height')+'</span><span class="v">'+p.height+' cm</span></div>';
+    if(p.weight) prof+='<div class="drow"><span class="k">'+t('prof.weight')+'</span><span class="v">'+p.weight+' kg</span></div>';
+    if(p.stats) prof+='<div class="drow"><span class="k">'+t('prof.stats')+'</span><span class="v">'+esc(p.stats)+'</span></div>';
+    // 등급별 요금표
+    var rate=services.filter(function(s){ return s.store_slug===p.store_slug && (s.tier===p.tier || s.tier==='all'); })
+      .sort(function(a,b){ return (a.duration_min||0)-(b.duration_min||0); });
+    var rateHtml = rate.length ? '<div class="ratecard '+ty+'"><div class="rt">'+t('spa.tier.'+ty)+' '+t('prof.rate')+(p.price_extra>0?' · '+t('spa.lblWho')+' '+tn('spa.extra',p.price_extra):'')+'</div>'+
+      rate.map(function(s){ return '<div class="rrow"><span>'+esc(s.name)+' · '+tn('spa.min',s.duration_min)+'</span><b>'+(s.price?'฿'+s.price:'-')+'</b></div>'; }).join('')+'</div>' : '';
     document.getElementById('sheet').innerHTML=
-      '<div class="hero '+ty+'"><button class="x" onclick="closeDetail()">✕</button>'+
-        '<div class="dpic">'+pic+'</div><div class="dnm">'+esc(p.name)+'</div><div class="dtags">'+tags+'</div></div>'+
+      '<button class="x" onclick="closeDetail()">✕</button>'+top+
       '<div class="body">'+
-        (p.bio?'<div class="drow"><span class="k">소개</span><span class="v">'+esc(p.bio)+'</span></div>':'')+
-        '<div class="drow"><span class="k">'+t('spa.lblWho')+'</span><span class="v">'+t('spa.tier.'+ty)+(p.price_extra>0?' · '+tn('spa.extra',p.price_extra):'')+'</span></div>'+
-        (sh?'<div class="drow"><span class="k">샵</span><span class="v">'+esc(sh)+(ar?' · '+esc(ar):'')+'</span></div>':'')+
+        (p.bio?'<div class="drow"><span class="k">'+t('prof.intro')+'</span><span class="v">'+esc(p.bio)+'</span></div>':'')+
+        prof+
+        (sh?'<div class="drow"><span class="k">'+t('prof.shop')+'</span><span class="v">'+esc(sh)+(ar?' · '+esc(ar):'')+'</span></div>':'')+
         '<div class="drow"><span class="k">'+t('spa.lblWhere')+'</span><span class="v">🏠 '+t('spa.locShop')+(p.outcall_ok?' · 🚗 '+t('spa.locOutcall'):'')+'</span></div>'+
-      '</div>'+
+      '</div>'+ rateHtml +
       '<div class="cta"><a class="bigbtn" style="display:block;text-align:center;text-decoration:none" href="book.html?store='+encodeURIComponent(p.store_slug)+'&provider='+encodeURIComponent(p.id)+'">'+t('show.book')+'</a></div>';
     document.getElementById('ov').classList.add('on');
   };
+  function dtags(p,ty){
+    return '<span class="dtag '+ty+'">'+t('spa.tier.'+ty)+'</span>'+
+      (p.price_extra>0?'<span class="dtag extra">'+tn('spa.extra',p.price_extra)+'</span>':'')+
+      (p.outcall_ok?'<span class="dtag out">🚗 '+t('show.outcallOk')+'</span>':'')+
+      (p.freelance?'<span class="dtag free">프리랜서</span>':'');
+  }
   window.closeDetail=function(){ document.getElementById('ov').classList.remove('on'); };
 
   function load(){
     Promise.all([
       supa.from('qsm_providers').select('*').eq('active',true).order('tier').order('sort'),
-      supa.from('qsm_shops').select('slug,names,area')
+      supa.from('qsm_shops').select('slug,names,area'),
+      supa.from('qsm_services').select('*').eq('active',true).order('duration_min')
     ]).then(function(r){
       providers=r[0].data||[]; shopMap={}; (r[1].data||[]).forEach(function(s){ shopMap[s.slug]=s; });
+      services=r[2].data||[];
       render();
     });
   }

@@ -36,6 +36,11 @@ create table if not exists qsm_providers (
   bio         text,
   avatar      text,
   price_extra int default 0,
+  age         int,
+  height      int,                            -- cm
+  weight      int,                            -- kg
+  stats       text,                           -- 사이즈 예: 34-24-36
+  photos      jsonb default '[]'::jsonb,      -- 갤러리 이미지 URL 배열
   active      boolean not null default true,
   sort        int default 0,
   created_at  timestamptz default now()
@@ -58,6 +63,7 @@ create table if not exists qsm_services (
   name         text not null,
   duration_min int not null default 60,
   price        int,
+  tier         text not null default 'all',   -- all | regular | pretty
   active       boolean not null default true,
   sort         int default 0,
   created_at   timestamptz default now()

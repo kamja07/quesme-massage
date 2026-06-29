@@ -180,7 +180,14 @@
     'show.login': { ko:'로그인 / 내 예약', en:'Log in / My booking', th:'เข้าสู่ระบบ / การจอง', zh:'登录 / 我的预约', ja:'ログイン / 予約', hi:'लॉगिन / मेरी बुकिंग', ru:'Вход / Моя бронь' },
     'show.browse': { ko:'전체 샵 둘러보기', en:'Browse all shops', th:'ดูร้านทั้งหมด', zh:'浏览所有门店', ja:'全店を見る', hi:'सभी दुकानें देखें', ru:'Все заведения' },
     'show.empty': { ko:'등록된 마사지사가 없어요', en:'No therapists yet', th:'ยังไม่มีหมอนวด', zh:'暂无按摩师', ja:'セラピストがいません', hi:'अभी कोई थेरेपिस्ट नहीं', ru:'Мастеров пока нет' },
-    'show.outcallOk': { ko:'출장 가능', en:'Outcall available', th:'นวดนอกสถานที่ได้', zh:'可上门', ja:'出張可', hi:'आउटकॉल उपलब्ध', ru:'Возможен выезд' }
+    'show.outcallOk': { ko:'출장 가능', en:'Outcall available', th:'นวดนอกสถานที่ได้', zh:'可上门', ja:'出張可', hi:'आउटकॉल उपलब्ध', ru:'Возможен выезд' },
+    'prof.intro': { ko:'소개', en:'About', th:'เกี่ยวกับ', zh:'简介', ja:'紹介', hi:'परिचय', ru:'О себе' },
+    'prof.age': { ko:'나이', en:'Age', th:'อายุ', zh:'年龄', ja:'年齢', hi:'उम्र', ru:'Возраст' },
+    'prof.height': { ko:'키', en:'Height', th:'ส่วนสูง', zh:'身高', ja:'身長', hi:'कद', ru:'Рост' },
+    'prof.weight': { ko:'몸무게', en:'Weight', th:'น้ำหนัก', zh:'体重', ja:'体重', hi:'वज़न', ru:'Вес' },
+    'prof.stats': { ko:'사이즈', en:'Stats', th:'สัดส่วน', zh:'三围', ja:'スタイル', hi:'माप', ru:'Параметры' },
+    'prof.shop': { ko:'샵', en:'Shop', th:'ร้าน', zh:'门店', ja:'店舗', hi:'दुकान', ru:'Заведение' },
+    'prof.rate': { ko:'요금', en:'Rates', th:'ราคา', zh:'价格', ja:'料金', hi:'दरें', ru:'Цены' }
   };
 
   function t(lang, key){ var e = S[key]; if (!e) return key; return e[lang] || e.en || e.ko || key; }

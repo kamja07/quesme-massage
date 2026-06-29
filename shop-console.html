@@ -26,7 +26,7 @@
   .ibtn{background:#eef3f1;border:none;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;color:#3c4a4d;cursor:pointer;}
   .ibtn.warn{background:#fdecea;color:var(--warm);}
   .tag{font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;margin-left:4px;}
-  .tag.pretty{background:#fff3cd;color:#9a6a00;} .tag.free{background:#e6f1fb;color:#185fa5;} .tag.out{background:var(--teal-l);color:var(--teal);}
+  .tag.pretty{background:#fff3cd;color:#9a6a00;} .tag.regular{background:#eef3f1;color:#5f6f6c;} .tag.free{background:#e6f1fb;color:#185fa5;} .tag.out{background:var(--teal-l);color:var(--teal);}
   .addbox{border:1.5px dashed #d7e2df; border-radius:13px; padding:13px; margin-bottom:14px;}
   .addbox .ttl{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:9px;}
   .addbox input, .addbox select{width:100%; padding:10px; border:1.5px solid #d7e2df; border-radius:9px; font-size:14px; font-family:inherit; margin-bottom:8px;}
@@ -96,9 +96,10 @@
   }
 
   // ---- CRUD ----
-  window.addProv=function(){ var n=v('p_name'); if(!n) return; supa.from('qsm_providers').insert({ store_slug:slug, name:n, login_id:v('p_login').toLowerCase(), tier:v('p_tier'), price_extra:parseInt(v('p_extra')||'0',10)||0, bio:v('p_bio'), freelance:document.getElementById('p_free').checked, outcall_ok:document.getElementById('p_out').checked, sort:providers.length+1 }).then(load); };
+  function vi(id){ var n=parseInt(v(id)||'',10); return isNaN(n)?null:n; }
+  window.addProv=function(){ var n=v('p_name'); if(!n) return; supa.from('qsm_providers').insert({ store_slug:slug, name:n, login_id:v('p_login').toLowerCase(), tier:v('p_tier'), price_extra:parseInt(v('p_extra')||'0',10)||0, bio:v('p_bio'), age:vi('p_age'), height:vi('p_height'), weight:vi('p_weight'), stats:v('p_stats')||null, freelance:document.getElementById('p_free').checked, outcall_ok:document.getElementById('p_out').checked, sort:providers.length+1 }).then(load); };
   window.addRoom=function(){ var n=v('r_name'); if(!n) return; supa.from('qsm_rooms').insert({ store_slug:slug, name:n, type:v('r_type'), capacity:parseInt(v('r_cap')||'1',10)||1, sort:rooms.length+1 }).then(load); };
-  window.addSvc=function(){ var n=v('s_name'); if(!n) return; supa.from('qsm_services').insert({ store_slug:slug, name:n, duration_min:parseInt(v('s_dur')||'60',10)||60, price:parseInt(v('s_price')||'0',10)||null, sort:services.length+1 }).then(load); };
+  window.addSvc=function(){ var n=v('s_name'); if(!n) return; supa.from('qsm_services').insert({ store_slug:slug, name:n, duration_min:parseInt(v('s_dur')||'60',10)||60, price:parseInt(v('s_price')||'0',10)||null, tier:v('s_tier')||'all', sort:services.length+1 }).then(load); };
   window.toggleActive=function(tbl,id,cur){ supa.from(tbl).update({active:!cur}).eq('id',id).then(load); };
   window.del=function(tbl,id){ supa.from(tbl).delete().eq('id',id).then(load); };
   window.advance=function(id,to){ supa.from('qsm_bookings').update({status:to}).eq('id',id).then(load); };
@@ -110,6 +111,9 @@
       b.innerHTML='<div class="addbox"><div class="ttl">＋ 마사지사 추가 (풀 등록)</div>'+
         '<input id="p_name" placeholder="이름"><div class="two"><input id="p_login" placeholder="로그인 아이디 (예: ploy)" autocapitalize="off"><select id="p_tier"><option value="regular">일반</option><option value="pretty">프리티</option></select></div>'+
         '<div class="two"><input id="p_extra" placeholder="지명 추가요금 ฿ (예:150)" inputmode="numeric"><input id="p_bio" placeholder="한 줄 소개"></div>'+
+        '<div class="ttl" style="margin:4px 0 7px">프로필 (프리티 등)</div>'+
+        '<div class="two"><input id="p_age" placeholder="나이" inputmode="numeric"><input id="p_height" placeholder="키 cm" inputmode="numeric"></div>'+
+        '<div class="two"><input id="p_weight" placeholder="몸무게 kg" inputmode="numeric"><input id="p_stats" placeholder="사이즈 (예: 34-24-36)"></div>'+
         '<div class="chk"><label><input type="checkbox" id="p_free"> 프리랜서</label><label><input type="checkbox" id="p_out"> 출장 가능</label></div>'+
         '<button class="bigbtn" onclick="addProv()">추가</button></div>'+
         (providers.length?providers.map(function(p){ var ini=(p.name||'?').charAt(0).toUpperCase();
@@ -123,8 +127,9 @@
       b.innerHTML='<div class="addbox"><div class="ttl">＋ 룸 추가</div><input id="r_name" placeholder="룸 이름 (예: 개인룸 1호)"><div class="two"><select id="r_type"><option value="private">개인룸</option><option value="shared">공용</option><option value="group">단체룸</option></select><input id="r_cap" placeholder="정원 (예:1)" inputmode="numeric"></div><button class="bigbtn" onclick="addRoom()">추가</button></div>'+
         (rooms.length?rooms.map(function(r){ return '<div class="row '+(r.active===false?'off':'')+'"><div class="av">🚪</div><div class="mid"><div class="nm">'+esc(r.name)+'</div><div class="meta">'+(TY[r.type]||r.type)+' · '+(r.capacity||1)+'인</div></div><div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_rooms\',\''+r.id+'\','+(r.active!==false)+')">'+(r.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_rooms\',\''+r.id+'\')">삭제</button></div></div>'; }).join(''):'<div class="empty">룸을 추가하세요</div>');
     } else if(tab==='services'){
-      b.innerHTML='<div class="addbox"><div class="ttl">＋ 시술 추가</div><input id="s_name" placeholder="시술명 (예: 타이 마사지)"><div class="two"><input id="s_dur" placeholder="소요(분) 예:60" inputmode="numeric"><input id="s_price" placeholder="가격 ฿ 예:300" inputmode="numeric"></div><button class="bigbtn" onclick="addSvc()">추가</button></div>'+
-        (services.length?services.map(function(s){ return '<div class="row '+(s.active===false?'off':'')+'"><div class="av">📋</div><div class="mid"><div class="nm">'+esc(s.name)+'</div><div class="meta">'+s.duration_min+'분'+(s.price?' · ฿'+s.price:'')+'</div></div><div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_services\',\''+s.id+'\','+(s.active!==false)+')">'+(s.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_services\',\''+s.id+'\')">삭제</button></div></div>'; }).join(''):'<div class="empty">시술을 추가하세요</div>');
+      var STIER={all:'공통',regular:'일반',pretty:'프리티'};
+      b.innerHTML='<div class="addbox"><div class="ttl">＋ 시술/요금 추가 (시간·옵션·가격 직접 입력)</div><input id="s_name" placeholder="시술/옵션명 (예: 타이 마사지)"><div class="two"><select id="s_tier"><option value="regular">일반 요금</option><option value="pretty">프리티 요금</option><option value="all">공통</option></select><input id="s_dur" placeholder="소요(분) 예:60" inputmode="numeric"></div><input id="s_price" placeholder="가격 ฿ 예:300" inputmode="numeric"><button class="bigbtn" onclick="addSvc()">추가</button></div>'+
+        (services.length?services.slice().sort(function(a,c){return (a.tier||'').localeCompare(c.tier||'')||(a.duration_min||0)-(c.duration_min||0);}).map(function(s){ var st=s.tier==='pretty'?'pretty':'regular'; return '<div class="row '+(s.active===false?'off':'')+'"><div class="av">📋</div><div class="mid"><div class="nm">'+esc(s.name)+'<span class="tag '+st+'">'+(STIER[s.tier]||'공통')+'</span></div><div class="meta">'+s.duration_min+'분'+(s.price?' · ฿'+s.price:'')+'</div></div><div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_services\',\''+s.id+'\','+(s.active!==false)+')">'+(s.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_services\',\''+s.id+'\')">삭제</button></div></div>'; }).join(''):'<div class="empty">시술/요금을 추가하세요</div>');
     } else {
       b.innerHTML=(bookings.length?bookings.slice().sort(function(a,c){return (a.start_time||'~').localeCompare(c.start_time||'~');}).map(function(bk){
         var svc=byId(services,bk.service_id), prov=byId(providers,bk.provider_id), room=byId(rooms,bk.room_id), out=bk.location_type==='outcall', serving=bk.status==='serving';

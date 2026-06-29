@@ -161,8 +161,11 @@
     var el=document.getElementById('body');
     if(myBooking && (myBooking.status==='waiting'||myBooking.status==='serving')){ el.innerHTML=ticket(myBooking); return; }
     // 예약 폼
-    var svcOpts = services.filter(function(s){return s.active!==false;}).map(function(s){
-      return '<div class="opt '+(sel.svc===s.id?'on':'')+'" onclick="pick(\'svc\',\''+s.id+'\')"><div><div class="nm">'+esc(s.name)+'</div><div class="meta">'+tn('spa.min',s.duration_min)+(s.price?' · ฿'+s.price:'')+'</div></div><div class="tick"></div></div>';
+    var selProvObj = sel.prov ? providers.filter(function(p){return p.id===sel.prov;})[0] : null;
+    var provTier = selProvObj ? selProvObj.tier : null;   // 지명 마사지사 등급에 맞는 요금만
+    var svcOpts = services.filter(function(s){ return s.active!==false && (!provTier || s.tier===provTier || s.tier==='all'); }).map(function(s){
+      var badge = s.tier==='pretty' ? ' <span class="rbadge" style="background:#fff3cd;color:#9a6a00">'+t('spa.tier.pretty')+'</span>' : '';
+      return '<div class="opt '+(sel.svc===s.id?'on':'')+'" onclick="pick(\'svc\',\''+s.id+'\')"><div><div class="nm">'+esc(s.name)+badge+'</div><div class="meta">'+tn('spa.min',s.duration_min)+(s.price?' · <b style="color:var(--teal)">฿'+s.price+'</b>':'')+'</div></div><div class="tick"></div></div>';
     }).join('') || '<div class="meta" style="color:#9aa7a4">—</div>';
 
     function provCard(p){
