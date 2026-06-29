@@ -64,7 +64,7 @@
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var lang = I18N.detectLang();
   function t(k){ return I18N.t(lang,k); }
-  var AREA = { thonglor:{ko:'텅러',en:'Thonglor',th:'ทองหล่อ'}, asok:{ko:'아속',en:'Asok',th:'อโศก'}, sukhumvit:{ko:'수쿰빗',en:'Sukhumvit',th:'สุขุมวิท'}, siam:{ko:'시암',en:'Siam',th:'สยาม'}, bangna:{ko:'방나',en:'Bangna',th:'บางนา'} };
+  var AREA = { nakluea:{ko:'나클루아',en:'Nakluea',th:'นาเกลือ'}, pattaya:{ko:'파타야',en:'Pattaya',th:'พัทยา'}, thonglor:{ko:'텅러',en:'Thonglor',th:'ทองหล่อ'}, asok:{ko:'아속',en:'Asok',th:'อโศก'}, sukhumvit:{ko:'수쿰빗',en:'Sukhumvit',th:'สุขุมวิท'}, siam:{ko:'시암',en:'Siam',th:'สยาม'}, bangna:{ko:'방나',en:'Bangna',th:'บางนา'} };
   function areaName(c){ var a=AREA[c]; if(!a) return c||''; return a[lang]||a.en||a.ko||c; }
   var esc=function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
 

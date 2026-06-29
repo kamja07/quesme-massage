@@ -2,9 +2,9 @@
 -- ⚠️ 테스트 전용. 비번 '123456' (약함). 운영 전 반드시 삭제/교체.
 -- 실행 순서: qsm_schema.sql 먼저 → 이 파일. (danny/684807은 이미 존재, 슈퍼관리자는 스키마가 지정)
 
--- 1) 테스트 마사지사 앱데이터 (sabai-thonglor 소속, login_id massage1..massage10)
+-- 1) 테스트 마사지사 앱데이터 (pattaya-ibalso 소속, login_id massage1..massage10)
 insert into qsm_providers (store_slug, name, login_id, tier, freelance, outcall_ok, bio, price_extra, sort)
-select 'sabai-thonglor', 'Massage '||i, 'massage'||i,
+select 'pattaya-ibalso', 'Massage '||i, 'massage'||i,
        case when i%3=0 then 'pretty' else 'regular' end,
        (i%2=0), (i%2=1),
        'Test therapist '||i,

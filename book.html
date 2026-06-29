@@ -80,7 +80,7 @@
 <script>
 (function(){
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
-  var slug = new URLSearchParams(location.search).get('store') || 'sabai-thonglor';
+  var slug = new URLSearchParams(location.search).get('store') || 'pattaya-ibalso';
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var lang = I18N.detectLang();
   function t(k){ return I18N.t(lang,k); }

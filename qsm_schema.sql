@@ -205,43 +205,43 @@ end $$;
 -- 운영자(슈퍼) danny + 데모 샵 매니저 sabaiboss(첫 로그인 시 본인이 비번 설정)
 insert into qsm_staff (email, name, role, store_slug) values
   ('danny@thaimate.app','Danny','super','*'),
-  ('sabaiboss@thaimate.app','Sabai Manager','manager','sabai-thonglor')
+  ('pattayaboss@thaimate.app','Pattaya Manager','manager','pattaya-ibalso')
 on conflict (email, store_slug) do nothing;
 
 insert into qsm_shops (slug, names, area, phone, hours, tagline, status) values
-  ('sabai-thonglor', '{"ko":"사바이 타이마사지 텅러","en":"Sabai Thai Massage Thonglor","th":"สบาย ไทยมาสสาจ ทองหล่อ"}'::jsonb,
-   'thonglor','+66 2 000 0000','10:00–24:00','전통 타이·오일·발 · 출장 가능','active')
+  ('pattaya-ibalso', '{"ko":"파타야 이발소","en":"Pattaya Ibalso","th":"พัทยา อีบัลโซ"}'::jsonb,
+   'nakluea',null,'10:00–22:00','이발·헤어·마사지 · 파타야 나클루아 · 출장 가능','active')
 on conflict (slug) do nothing;
 
-delete from qsm_providers where store_slug='sabai-thonglor';
-delete from qsm_rooms      where store_slug='sabai-thonglor';
-delete from qsm_services   where store_slug='sabai-thonglor';
+delete from qsm_providers where store_slug='pattaya-ibalso';
+delete from qsm_rooms      where store_slug='pattaya-ibalso';
+delete from qsm_services   where store_slug='pattaya-ibalso';
 
 insert into qsm_providers (store_slug, name, login_id, tier, freelance, outcall_ok, bio, price_extra, sort) values
-  ('sabai-thonglor','Ploy','ploy','pretty',true, true,'Oil & aroma specialist · 5y',150,1),
-  ('sabai-thonglor','Mint','mint','pretty',false,false,'Thai & foot · top rated',150,2),
-  ('sabai-thonglor','Nong Ann','nongann','regular',false,false,'Thai massage · 10y',0,3),
-  ('sabai-thonglor','Aoy','aoy','regular',true, true,'Shoulder & foot focus',0,4);
+  ('pattaya-ibalso','Ploy','ploy','pretty',true, true,'Oil & aroma specialist · 5y',150,1),
+  ('pattaya-ibalso','Mint','mint','pretty',false,false,'Thai & foot · top rated',150,2),
+  ('pattaya-ibalso','Nong Ann','nongann','regular',false,false,'Thai massage · 10y',0,3),
+  ('pattaya-ibalso','Aoy','aoy','regular',true, true,'Shoulder & foot focus',0,4);
 
 insert into qsm_rooms (store_slug, name, type, capacity, sort) values
-  ('sabai-thonglor','Private Room 1','private',1,1),
-  ('sabai-thonglor','Private Room 2','private',1,2),
-  ('sabai-thonglor','Couple Room','private',2,3),
-  ('sabai-thonglor','Shared Hall','shared',4,4),
-  ('sabai-thonglor','Group Room','group',8,5);
+  ('pattaya-ibalso','Private Room 1','private',1,1),
+  ('pattaya-ibalso','Private Room 2','private',1,2),
+  ('pattaya-ibalso','Couple Room','private',2,3),
+  ('pattaya-ibalso','Shared Hall','shared',4,4),
+  ('pattaya-ibalso','Group Room','group',8,5);
 
 insert into qsm_services (store_slug, name, duration_min, price, sort) values
-  ('sabai-thonglor','Thai Massage',60,300,1),
-  ('sabai-thonglor','Thai Massage',90,450,2),
-  ('sabai-thonglor','Thai Massage',120,600,3),
-  ('sabai-thonglor','Oil Massage',60,400,4),
-  ('sabai-thonglor','Oil Massage',90,550,5),
-  ('sabai-thonglor','Foot Massage',30,200,6),
-  ('sabai-thonglor','Foot Massage',60,350,7);
+  ('pattaya-ibalso','Thai Massage',60,300,1),
+  ('pattaya-ibalso','Thai Massage',90,450,2),
+  ('pattaya-ibalso','Thai Massage',120,600,3),
+  ('pattaya-ibalso','Oil Massage',60,400,4),
+  ('pattaya-ibalso','Oil Massage',90,550,5),
+  ('pattaya-ibalso','Foot Massage',30,200,6),
+  ('pattaya-ibalso','Foot Massage',60,350,7);
 
 -- 오늘 출근(데모): Ploy=샵+출장, Mint=샵, Aoy=출장
 insert into qsm_shifts (store_slug, provider_id, work_date, avail)
-select 'sabai-thonglor', id, current_date,
+select 'pattaya-ibalso', id, current_date,
   case name when 'Ploy' then 'both' when 'Mint' then 'shop' when 'Aoy' then 'outcall' end
 from qsm_providers
-where store_slug='sabai-thonglor' and name in ('Ploy','Mint','Aoy');
+where store_slug='pattaya-ibalso' and name in ('Ploy','Mint','Aoy');

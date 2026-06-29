@@ -119,8 +119,8 @@
     html+='<div class="sec"><div class="sech">🏪 샵 관리 ('+shops.length+')</div>';
     {
       html+='<div class="addbox"><div class="ttl">＋ 새 샵 추가 (오프라인 영업 → 직접 등록)</div>'+
-        '<input id="sh_name" placeholder="샵 이름 (예: 사바이 텅러)"><div class="two"><input id="sh_slug" placeholder="샵코드 (예: sabai-thonglor)" autocapitalize="off"><input id="sh_area" placeholder="지역 (예: 텅러)"></div>'+
-        '<input id="sh_mgr" placeholder="샵 매니저 로그인 아이디 (예: sabaiboss)" autocapitalize="off">'+
+        '<input id="sh_name" placeholder="샵 이름 (예: 파타야 이발소)"><div class="two"><input id="sh_slug" placeholder="샵코드 (예: pattaya-ibalso)" autocapitalize="off"><input id="sh_area" placeholder="지역 (예: 나클루아)"></div>'+
+        '<input id="sh_mgr" placeholder="샵 매니저 로그인 아이디 (예: pattayaboss)" autocapitalize="off">'+
         '<button class="bigbtn" onclick="addShop()">샵 + 매니저 등록</button></div>';
     }
     html+=(shops.length?shops.slice().sort(function(a,b){return (a.slug||'').localeCompare(b.slug||'');}).map(shopCard).join(''):'<div class="empty">샵 없음</div>')+'</div>';
