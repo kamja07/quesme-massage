@@ -158,13 +158,12 @@ drop policy if exists qsm_shop_admin on qsm_shops;
 create policy qsm_shop_admin on qsm_shops for all    to authenticated using (qsm_is_admin()) with check (qsm_is_admin());
 create policy qsm_shop_staff on qsm_shops for update to authenticated using (qsm_is_staff(slug)) with check (qsm_is_staff(slug));
 
--- 직원/매니저 명단: 조회=운영자, 변경=슈퍼만(부관리자는 직원지정 불가)
+-- 직원/매니저 명단: 운영자(슈퍼=부관리자 동일 권한) 전체 관리 + 본인 역할 조회
 drop policy if exists qsm_staff_admin on qsm_staff;
 drop policy if exists qsm_staff_read on qsm_staff;
 drop policy if exists qsm_staff_self on qsm_staff;
 create policy qsm_staff_self  on qsm_staff for select to authenticated using (email = (auth.jwt() ->> 'email'));  -- 본인 역할 확인용
-create policy qsm_staff_read  on qsm_staff for select to authenticated using (qsm_is_admin());
-create policy qsm_staff_admin on qsm_staff for all    to authenticated using (qsm_is_super()) with check (qsm_is_super());
+create policy qsm_staff_admin on qsm_staff for all    to authenticated using (qsm_is_admin()) with check (qsm_is_admin());
 
 -- 마사지사·룸·시술: 직원 쓰기 + 마사지사 본인 프로필 수정
 drop policy if exists qsm_prov_staff on qsm_providers;

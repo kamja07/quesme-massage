@@ -93,12 +93,10 @@
   }
 
   function loadDash(){
-    var q=[ supa.from('qsm_shops').select('*'), supa.from('qsm_bookings').select('store_slug').eq('book_date',today()).neq('status','cancelled') ];
-    if(isSuper) q.push(supa.from('qsm_staff').select('*'));
-    Promise.all(q).then(function(r){
+    Promise.all([ supa.from('qsm_shops').select('*'), supa.from('qsm_bookings').select('store_slug').eq('book_date',today()).neq('status','cancelled'), supa.from('qsm_staff').select('*') ]).then(function(r){
       shops=r[0].data||[]; counts={}; (r[1].data||[]).forEach(function(b){counts[b.store_slug]=(counts[b.store_slug]||0)+1;});
-      staff=isSuper?(r[2].data||[]):[];
-      document.getElementById('who').textContent = myEmail + (isSuper?' · 슈퍼관리자':' · 부관리자');
+      staff=r[2].data||[];
+      document.getElementById('who').textContent = myEmail + (isSuper?' · 슈퍼관리자':' · 부관리자(동일 권한)');
       render();
     });
   }
@@ -115,11 +113,11 @@
     var totBk=Object.keys(counts).reduce(function(a,k){return a+counts[k];},0);
     var html='<div class="stats"><div class="stat"><div class="v">'+shops.length+'</div><div class="k">샵</div></div>'+
       '<div class="stat"><div class="v">'+totBk+'</div><div class="k">오늘 예약(합)</div></div>'+
-      (isSuper?'<div class="stat"><div class="v">'+staff.length+'</div><div class="k">운영진·매니저</div></div>':'')+'</div>';
+      '<div class="stat"><div class="v">'+staff.length+'</div><div class="k">운영진·매니저</div></div></div>';
 
     // 샵 관리
     html+='<div class="sec"><div class="sech">🏪 샵 관리 ('+shops.length+')</div>';
-    if(isSuper){
+    {
       html+='<div class="addbox"><div class="ttl">＋ 새 샵 추가 (오프라인 영업 → 직접 등록)</div>'+
         '<input id="sh_name" placeholder="샵 이름 (예: 사바이 텅러)"><div class="two"><input id="sh_slug" placeholder="샵코드 (예: sabai-thonglor)" autocapitalize="off"><input id="sh_area" placeholder="지역 (예: 텅러)"></div>'+
         '<input id="sh_mgr" placeholder="샵 매니저 로그인 아이디 (예: sabaiboss)" autocapitalize="off">'+
@@ -127,8 +125,8 @@
     }
     html+=(shops.length?shops.slice().sort(function(a,b){return (a.slug||'').localeCompare(b.slug||'');}).map(shopCard).join(''):'<div class="empty">샵 없음</div>')+'</div>';
 
-    // 운영진·매니저 (슈퍼만)
-    if(isSuper){
+    // 운영진·매니저 (슈퍼=부관리자 동일 권한)
+    {
       html+='<div class="sec"><div class="sech">👤 운영진 · 매니저</div>'+
         '<div class="addbox"><div class="ttl">＋ 부관리자 추가</div><div class="two"><input id="ad_login" placeholder="아이디"><input id="ad_name" placeholder="이름(선택)"></div><button class="btn block" onclick="addAdmin()">부관리자 등록</button></div>'+
         '<div class="addbox"><div class="ttl">＋ 샵 매니저 추가</div><input id="mg_login" placeholder="아이디"><select id="mg_shop">'+shops.map(function(s){return '<option value="'+esc(s.slug)+'">'+esc(shopName(s))+'</option>';}).join('')+'</select><button class="btn block" onclick="addMgr()">매니저 등록</button></div>'+
