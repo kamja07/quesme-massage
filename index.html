@@ -65,7 +65,7 @@
     document.getElementById('tag').textContent=t('spa.tagline');
     document.getElementById('nlabel').textContent=t('start.nickLabel');
     nickEl.placeholder=t('start.nickPh'); goEl.textContent=t('start.go');
-    document.getElementById('owner').textContent='💆 마사지샵 사장님이세요? →';
+    document.getElementById('owner').textContent='관리자 · 매니저 · 마사지사 로그인 →';
   }
   window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} chrome(); if(nickEl.value.trim()) showStatus(); };
   function setStatus(m,c){ statusEl.textContent=m; statusEl.className='nstatus '+c; }

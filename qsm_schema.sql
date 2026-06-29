@@ -17,8 +17,11 @@ create table if not exists qsm_shops (
 create table if not exists qsm_staff (
   id         uuid primary key default gen_random_uuid(),
   email      text not null,
-  store_slug text not null,                 -- '*' = 플랫폼 운영자(슈퍼)
-  created_at timestamptz default now()
+  name       text,
+  role       text not null default 'manager', -- super | admin(부관리자) | manager(샵매니저)
+  store_slug text not null,                    -- super/admin = '*', manager = 샵코드
+  created_at timestamptz default now(),
+  unique (email, store_slug)
 );
 
 create table if not exists qsm_providers (
@@ -93,22 +96,17 @@ create table if not exists qsm_shifts (
   unique (provider_id, work_date)
 );
 
-create table if not exists qsm_shop_requests (
-  id           uuid primary key default gen_random_uuid(),
-  name         text,
-  area         text,
-  contact      text,
-  desired_slug text,
-  owner_login  text,
-  status       text not null default 'pending',
-  note         text,
-  created_at   timestamptz default now()
-);
-
 -- ========== 권한 함수 ==========
+-- 슈퍼관리자: role='super'
 create or replace function qsm_is_super() returns boolean
 language sql security definer stable set search_path = public as $$
-  select exists (select 1 from qsm_staff s where s.store_slug='*' and s.email = (auth.jwt() ->> 'email'));
+  select exists (select 1 from qsm_staff s where s.role='super' and s.store_slug='*' and s.email = (auth.jwt() ->> 'email'));
+$$;
+
+-- 운영자(슈퍼+부관리자): store_slug='*'
+create or replace function qsm_is_admin() returns boolean
+language sql security definer stable set search_path = public as $$
+  select exists (select 1 from qsm_staff s where s.store_slug='*' and s.role in ('super','admin') and s.email = (auth.jwt() ->> 'email'));
 $$;
 
 create or replace function qsm_is_staff(p_slug text) returns boolean
@@ -136,7 +134,6 @@ alter table qsm_rooms         enable row level security;
 alter table qsm_services      enable row level security;
 alter table qsm_bookings      enable row level security;
 alter table qsm_shifts        enable row level security;
-alter table qsm_shop_requests enable row level security;
 
 -- 조회: 누구나 (손님 탐색)
 do $$ begin
@@ -155,13 +152,19 @@ create policy qsm_svc_read  on qsm_services  for select to anon, authenticated u
 create policy qsm_book_read on qsm_bookings  for select to anon, authenticated using (true);
 create policy qsm_shift_read on qsm_shifts   for select to anon, authenticated using (true);
 
--- 샵: 본인 샵 수정(직원), 전체(슈퍼)
+-- 샵: 운영자(슈퍼/부관리자) 전체 + 샵매니저 본인 샵 수정
 drop policy if exists qsm_shop_staff on qsm_shops;
-create policy qsm_shop_staff on qsm_shops for all to authenticated using (qsm_is_staff(slug)) with check (qsm_is_staff(slug));
+drop policy if exists qsm_shop_admin on qsm_shops;
+create policy qsm_shop_admin on qsm_shops for all    to authenticated using (qsm_is_admin()) with check (qsm_is_admin());
+create policy qsm_shop_staff on qsm_shops for update to authenticated using (qsm_is_staff(slug)) with check (qsm_is_staff(slug));
 
--- 직원 명단: 슈퍼 전체
+-- 직원/매니저 명단: 조회=운영자, 변경=슈퍼만(부관리자는 직원지정 불가)
 drop policy if exists qsm_staff_admin on qsm_staff;
-create policy qsm_staff_admin on qsm_staff for all to authenticated using (qsm_is_super()) with check (qsm_is_super());
+drop policy if exists qsm_staff_read on qsm_staff;
+drop policy if exists qsm_staff_self on qsm_staff;
+create policy qsm_staff_self  on qsm_staff for select to authenticated using (email = (auth.jwt() ->> 'email'));  -- 본인 역할 확인용
+create policy qsm_staff_read  on qsm_staff for select to authenticated using (qsm_is_admin());
+create policy qsm_staff_admin on qsm_staff for all    to authenticated using (qsm_is_super()) with check (qsm_is_super());
 
 -- 마사지사·룸·시술: 직원 쓰기 + 마사지사 본인 프로필 수정
 drop policy if exists qsm_prov_staff on qsm_providers;
@@ -189,12 +192,6 @@ drop policy if exists qsm_shift_self  on qsm_shifts;
 create policy qsm_shift_staff on qsm_shifts for all to authenticated using (qsm_is_staff(store_slug)) with check (qsm_is_staff(store_slug));
 create policy qsm_shift_self  on qsm_shifts for all to authenticated using (qsm_is_provider(provider_id)) with check (qsm_is_provider(provider_id));
 
--- 샵 신청: 누구나 신청(pending), 슈퍼 전체
-drop policy if exists qsm_req_insert on qsm_shop_requests;
-drop policy if exists qsm_req_admin  on qsm_shop_requests;
-create policy qsm_req_insert on qsm_shop_requests for insert to anon, authenticated with check (status='pending');
-create policy qsm_req_admin  on qsm_shop_requests for all    to authenticated using (qsm_is_super()) with check (qsm_is_super());
-
 -- ========== realtime ==========
 do $$ begin
   begin alter publication supabase_realtime add table qsm_shops;         exception when others then null; end;
@@ -203,11 +200,14 @@ do $$ begin
   begin alter publication supabase_realtime add table qsm_services;      exception when others then null; end;
   begin alter publication supabase_realtime add table qsm_bookings;      exception when others then null; end;
   begin alter publication supabase_realtime add table qsm_shifts;        exception when others then null; end;
-  begin alter publication supabase_realtime add table qsm_shop_requests; exception when others then null; end;
 end $$;
 
 -- ========== 시드 (데모 샵 + 운영자) ==========
-insert into qsm_staff (email, store_slug) values ('danny@thaimate.app','*') on conflict do nothing;
+-- 운영자(슈퍼) danny + 데모 샵 매니저 sabaiboss(첫 로그인 시 본인이 비번 설정)
+insert into qsm_staff (email, name, role, store_slug) values
+  ('danny@thaimate.app','Danny','super','*'),
+  ('sabaiboss@thaimate.app','Sabai Manager','manager','sabai-thonglor')
+on conflict (email, store_slug) do nothing;
 
 insert into qsm_shops (slug, names, area, phone, hours, tagline, status) values
   ('sabai-thonglor', '{"ko":"사바이 타이마사지 텅러","en":"Sabai Thai Massage Thonglor","th":"สบาย ไทยมาสสาจ ทองหล่อ"}'::jsonb,
