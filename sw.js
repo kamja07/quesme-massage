@@ -1,7 +1,7 @@
 /* QuesMe Massage — service worker (app shell cache, network-first) */
-var CACHE = 'qsmmassage-v2';
+var CACHE = 'qsmmassage-v3';
 var SHELL = [
-  './', 'index.html', 'home.html', 'book.html', 'therapist.html', 'admin.html', 'shop-console.html', 'qr.html',
+  './', 'index.html', 'login.html', 'home.html', 'book.html', 'therapist.html', 'admin.html', 'shop-console.html', 'qr.html',
   'app.css', 'i18n.js', 'inapp.js', 'pwa.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'
 ];
 self.addEventListener('install', function (e){ e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(SHELL).catch(function(){}); }).then(function(){ return self.skipWaiting(); })); });

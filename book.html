@@ -81,6 +81,7 @@
 (function(){
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
   var slug = new URLSearchParams(location.search).get('store') || 'pattaya-ibalso';
+  var preProvider = new URLSearchParams(location.search).get('provider') || null;   // 쇼케이스에서 지명
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var lang = I18N.detectLang();
   function t(k){ return I18N.t(lang,k); }
@@ -253,6 +254,7 @@
     ]).then(function(res){
       store=res[0].data||{slug:slug,names:{}}; providers=res[1].data||[]; rooms=res[2].data||[]; services=res[3].data||[];
       shifts=res[4].data||[]; shiftIdx={}; shifts.forEach(function(s){ shiftIdx[s.provider_id]=s; });
+      if(preProvider && providers.some(function(p){return p.id===preProvider;})){ sel.prov=preProvider; }   // 쇼케이스 지명 반영
       loadMine();
     });
   }
