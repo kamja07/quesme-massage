@@ -13,18 +13,17 @@
   .wtop{display:flex; padding:14px 16px 0;}
   .wlang{margin-left:auto; background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:9px; padding:6px 9px; font-size:12px; font-family:inherit;}
   .wlang option{color:#16323A;}
-  .wmid{flex:1; display:flex; flex-direction:column; justify-content:center; padding:8px 22px 28px; max-width:460px; margin:0 auto; width:100%;}
-  .wbrand{color:#fff; font-size:36px; font-weight:800; letter-spacing:-.5px; text-align:center;}
-  .wbrand small{font-size:16px; opacity:.85; font-weight:700;}
-  .wtag{color:rgba(255,255,255,.92); font-size:15px; text-align:center; margin:6px 0 26px;}
+  .wmid{flex:1; display:flex; flex-direction:column; justify-content:center; padding:8px 22px 28px; max-width:440px; margin:0 auto; width:100%;}
+  .wbrand{color:#fff; font-size:34px; font-weight:800; letter-spacing:-.5px; text-align:center;}
+  .wbrand small{font-size:15px; opacity:.85; font-weight:700;}
+  .wtag{color:rgba(255,255,255,.95); font-size:15.5px; text-align:center; margin:8px 0 24px; line-height:1.5;}
   .wcard{background:#fff; border-radius:20px; padding:22px 20px;}
-  .wcard label{display:block; font-size:13px; color:var(--muted); font-weight:700; margin-bottom:9px; line-height:1.4;}
-  .wcard input{width:100%; padding:15px 16px; border:1.5px solid #d7e2df; border-radius:13px; font-size:18px; font-weight:700; font-family:inherit; color:var(--ink); text-align:center;}
+  .wcard input{width:100%; padding:14px 16px; border:1.5px solid #d7e2df; border-radius:13px; font-size:16px; font-family:inherit; color:var(--ink); margin-bottom:11px;}
   .wcard input:focus{outline:none; border-color:var(--teal);}
-  .nstatus{min-height:18px; font-size:12.5px; font-weight:700; margin:8px 2px 0; text-align:center;}
-  .nstatus.ok{color:var(--teal);} .nstatus.bad{color:var(--warm);} .nstatus.dim{color:#9aa7a4;}
-  .wcard .bigbtn{margin-top:14px;} .wcard .bigbtn:disabled{background:#bcc9c6;}
-  .owner{display:block; text-align:center; margin-top:22px; color:rgba(255,255,255,.78); font-size:13px; text-decoration:none; padding:8px;}
+  .nstatus{min-height:18px; font-size:12.5px; font-weight:700; margin:2px 2px 10px; text-align:center;}
+  .nstatus.bad{color:var(--warm);} .nstatus.dim{color:#9aa7a4;}
+  .signup{display:block; text-align:center; margin-top:14px; color:var(--teal); font-size:14px; font-weight:700; text-decoration:none; cursor:pointer;}
+  .owner{display:block; text-align:center; margin-top:22px; color:rgba(255,255,255,.7); font-size:12.5px; text-decoration:none; padding:8px;}
   .owner:hover{color:#fff;}
 </style>
 </head>
@@ -37,10 +36,11 @@
     <div class="wbrand">QuesMe <small>Massage</small></div>
     <div class="wtag" id="tag"></div>
     <div class="wcard">
-      <label id="nlabel"></label>
-      <input id="nick" maxlength="12" autocapitalize="off" autocomplete="off" oninput="onNick()" onkeydown="if(event.key==='Enter')start()">
-      <div class="nstatus dim" id="nstatus"></div>
-      <button class="bigbtn" id="go" onclick="start()"></button>
+      <input id="nick" maxlength="20" autocapitalize="off" autocomplete="username" autocorrect="off">
+      <input id="pw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="nstatus dim" id="msg"></div>
+      <button class="bigbtn" id="loginBtn" onclick="doLogin()"></button>
+      <a class="signup" id="signupLink" onclick="doSignup()"></a>
     </div>
     <a class="owner" id="owner" href="admin.html"></a>
   </div>
@@ -56,41 +56,52 @@
   if(store){ location.replace('book.html?store='+encodeURIComponent(store)); return; }
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var lang = I18N.detectLang();
+  var GUEST='@guest.quesme.app';
+  var RE_NICK=/^[A-Za-z]{4,}$/, RE_PW=/^(?=.*\d)[A-Za-z0-9]{6,}$/;
   function t(k){ return I18N.t(lang,k); }
-  var nickEl=document.getElementById('nick'), statusEl=document.getElementById('nstatus'), goEl=document.getElementById('go');
-  var checkT=null, taken=false;
+  var nickEl=document.getElementById('nick'), pwEl=document.getElementById('pw'), msgEl=document.getElementById('msg');
 
   function chrome(){
     document.getElementById('lang').value=lang;
-    document.getElementById('tag').textContent=t('spa.tagline');
-    document.getElementById('nlabel').textContent=t('start.nickLabel');
-    nickEl.placeholder=t('start.nickPh'); goEl.textContent=t('start.go');
+    document.getElementById('tag').textContent=t('cust.guide');
+    nickEl.placeholder=t('cust.nickPh'); pwEl.placeholder=t('cust.pwPh');
+    document.getElementById('loginBtn').textContent=t('cust.login');
+    document.getElementById('signupLink').textContent=t('cust.signupQ');
     document.getElementById('owner').textContent='관리자 · 매니저 · 마사지사 로그인 →';
   }
-  window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} chrome(); if(nickEl.value.trim()) showStatus(); };
-  function setStatus(m,c){ statusEl.textContent=m; statusEl.className='nstatus '+c; }
-  function showStatus(){ setStatus(taken?t('start.taken'):t('start.available'), taken?'bad':'ok'); }
-  function check(){
-    var v=nickEl.value.trim().toLowerCase();
-    if(!v){ taken=false; setStatus('',''); goEl.disabled=false; return; }
-    return supa.from('qsm_bookings').select('nick').in('status',['waiting','serving']).then(function(res){
-      var set=(res.data||[]).map(function(r){return (r.nick||'').trim().toLowerCase();});
-      taken=set.indexOf(v)>=0; showStatus(); goEl.disabled=taken;
-    });
+  window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} chrome(); };
+  function msg(m,c){ msgEl.textContent=m||''; msgEl.className='nstatus '+(c||'dim'); }
+
+  function validate(){
+    var nick=nickEl.value.trim(), pw=pwEl.value||'';
+    if(!RE_NICK.test(nick)){ msg(t('cust.nickRule'),'bad'); nickEl.focus(); return null; }
+    if(!RE_PW.test(pw)){ msg(t('cust.pwRule'),'bad'); pwEl.focus(); return null; }
+    return { nick:nick, email:nick.toLowerCase()+GUEST, pw:pw };
   }
-  window.onNick=function(){
-    if(checkT) clearTimeout(checkT);
-    var v=nickEl.value.trim();
-    if(!v){ taken=false; setStatus('',''); goEl.disabled=false; return; }
-    setStatus(t('start.checking'),'dim'); goEl.disabled=true; checkT=setTimeout(check,400);
+  function ok(nick){ try{ localStorage.setItem('quesme:nick',nick); }catch(e){} location.href='home.html'; }
+
+  window.doLogin=function(){
+    var d=validate(); if(!d) return; msg('',''); document.getElementById('loginBtn').disabled=true;
+    supa.auth.signInWithPassword({ email:d.email, password:d.pw }).then(function(r){
+      document.getElementById('loginBtn').disabled=false;
+      if(r&&r.error){ msg(t('cust.loginFail'),'bad'); return; }
+      ok(d.nick);
+    });
   };
-  window.start=function(){
-    var v=nickEl.value.trim(); if(!v){ nickEl.focus(); return; }
-    goEl.disabled=true; setStatus(t('start.checking'),'dim');
-    Promise.resolve(check()).then(function(){ if(taken){ goEl.disabled=true; nickEl.focus(); return; } try{ localStorage.setItem('quesme:nick',v); }catch(e){} location.href='home.html'; });
+  window.doSignup=function(){
+    var d=validate(); if(!d) return; msg('','');
+    supa.auth.signUp({ email:d.email, password:d.pw }).then(function(r){
+      if(r&&r.error){ msg(/registered|exists|already/i.test(r.error.message||'')?t('cust.taken'):(r.error.message||'가입 실패'),'bad'); return; }
+      ok(d.nick);
+    });
   };
-  try{ var saved=localStorage.getItem('quesme:nick'); if(saved) nickEl.value=saved; }catch(e){}
-  chrome(); if(nickEl.value.trim()) onNick();
+
+  // 이미 고객으로 로그인돼 있으면 바로 둘러보기로
+  supa.auth.getSession().then(function(r){
+    var s=r.data&&r.data.session; var em=(s&&s.user&&s.user.email)||'';
+    if(em.indexOf(GUEST)>=0){ location.replace('home.html'); return; }
+    chrome();
+  });
 })();
 </script>
 <script src="pwa.js"></script>
