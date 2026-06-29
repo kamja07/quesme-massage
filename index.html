@@ -18,8 +18,9 @@
   .wbrand small{font-size:15px; opacity:.85; font-weight:700;}
   .wtag{color:rgba(255,255,255,.95); font-size:15.5px; text-align:center; margin:8px 0 24px; line-height:1.5;}
   .wcard{background:#fff; border-radius:20px; padding:22px 20px;}
-  .wcard input{width:100%; padding:14px 16px; border:1.5px solid #d7e2df; border-radius:13px; font-size:16px; font-family:inherit; color:var(--ink); margin-bottom:11px;}
+  .wcard input{width:100%; padding:14px 16px; border:1.5px solid #d7e2df; border-radius:13px; font-size:16px; font-family:inherit; color:var(--ink); margin-bottom:5px;}
   .wcard input:focus{outline:none; border-color:var(--teal);}
+  .fhint{font-size:11.5px; color:#9aa7a4; margin:0 4px 11px; line-height:1.4;}
   .nstatus{min-height:18px; font-size:12.5px; font-weight:700; margin:2px 2px 10px; text-align:center;}
   .nstatus.bad{color:var(--warm);} .nstatus.dim{color:#9aa7a4;}
   .signup{display:block; text-align:center; margin-top:14px; color:var(--teal); font-size:14px; font-weight:700; text-decoration:none; cursor:pointer;}
@@ -37,12 +38,13 @@
     <div class="wtag" id="tag"></div>
     <div class="wcard">
       <input id="nick" maxlength="20" autocapitalize="off" autocomplete="username" autocorrect="off">
+      <div class="fhint" id="nickHint"></div>
       <input id="pw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="fhint" id="pwHint"></div>
       <div class="nstatus dim" id="msg"></div>
       <button class="bigbtn" id="loginBtn" onclick="doLogin()"></button>
       <a class="signup" id="signupLink" onclick="doSignup()"></a>
     </div>
-    <a class="owner" id="owner" href="admin.html"></a>
   </div>
 </div>
 
@@ -67,9 +69,10 @@
     nickEl.placeholder=t('cust.nickPh'); pwEl.placeholder=t('cust.pwPh');
     document.getElementById('loginBtn').textContent=t('cust.login');
     document.getElementById('signupLink').textContent=t('cust.signupQ');
-    document.getElementById('owner').textContent='관리자 · 매니저 · 마사지사 로그인 →';
+    document.getElementById('nickHint').textContent=t('cust.nickRule');
+    document.getElementById('pwHint').textContent=t('cust.pwRule');
   }
-  window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} chrome(); };
+  window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} chrome(); msg('',''); };
   function msg(m,c){ msgEl.textContent=m||''; msgEl.className='nstatus '+(c||'dim'); }
 
   function validate(){
