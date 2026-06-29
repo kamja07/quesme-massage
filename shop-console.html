@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#16323A">
+<script src="inapp.js"></script>
+<title>QuesMe Massage · 샵 콘솔</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  .sc{max-width:680px; margin:0 auto; min-height:100%; background:#fff;}
+  .sc-top{background:var(--ink); color:#fff; padding:13px 18px; display:flex; align-items:center; justify-content:space-between;}
+  .sc-top .t1{font-size:16px; font-weight:800;} .sc-top .t2{font-size:11px; opacity:.8;}
+  .logoutbtn{background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:700;}
+  .tabs{display:flex; border-bottom:1px solid #eef3f1; position:sticky; top:0; background:#fff; z-index:4;}
+  .tab{flex:1; padding:13px 6px; text-align:center; font-size:13px; font-weight:700; color:var(--muted); border-bottom:2px solid transparent; cursor:pointer;}
+  .tab.on{color:var(--teal); border-bottom-color:var(--teal);}
+  .body{padding:14px 16px 30px;}
+  .row{display:flex; align-items:center; gap:11px; padding:12px; border:1px solid #eef3f1; border-radius:13px; margin-bottom:9px;}
+  .row.off{opacity:.5;}
+  .row .av{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:var(--teal-l);color:var(--teal);font-weight:800;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .row .av img{width:100%;height:100%;object-fit:cover;}
+  .row .av.pretty{box-shadow:0 0 0 2px #e6b800;}
+  .row .mid{flex:1;min-width:0;} .row .nm{font-size:15px;font-weight:800;} .row .meta{font-size:12px;color:var(--muted);margin-top:1px;}
+  .row .acts{display:flex;gap:5px;}
+  .ibtn{background:#eef3f1;border:none;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;color:#3c4a4d;cursor:pointer;}
+  .ibtn.warn{background:#fdecea;color:var(--warm);}
+  .tag{font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;margin-left:4px;}
+  .tag.pretty{background:#fff3cd;color:#9a6a00;} .tag.free{background:#e6f1fb;color:#185fa5;} .tag.out{background:var(--teal-l);color:var(--teal);}
+  .addbox{border:1.5px dashed #d7e2df; border-radius:13px; padding:13px; margin-bottom:14px;}
+  .addbox .ttl{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:9px;}
+  .addbox input, .addbox select{width:100%; padding:10px; border:1.5px solid #d7e2df; border-radius:9px; font-size:14px; font-family:inherit; margin-bottom:8px;}
+  .addbox .two{display:flex; gap:8px;} .addbox .two>*{flex:1;}
+  .chk{display:flex; gap:14px; margin-bottom:9px; font-size:13px; color:var(--ink);}
+  .chk label{display:flex; align-items:center; gap:5px;}
+  .empty{text-align:center; color:#9aa7a4; padding:24px; font-size:13px;}
+  .bk{display:flex;align-items:center;gap:11px;padding:12px;border:1px solid #eef3f1;border-radius:13px;margin-bottom:9px;}
+  .bk.serving{border-color:var(--warm);background:var(--warm-l);}
+  .bk .tm{flex:0 0 50px;text-align:center;} .bk .tm .h{font-size:14px;font-weight:800;color:var(--teal);}
+  .bk .mid{flex:1;min-width:0;} .bk .nick{font-size:14px;font-weight:800;} .bk .meta{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .loginwrap{position:fixed;inset:0;background:#0c1a1f;display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+  .logincard{background:#fff;border-radius:18px;padding:28px 24px;width:100%;max-width:360px;}
+  .loginh{text-align:center;font-size:20px;font-weight:800;color:var(--teal);}
+  .logint{text-align:center;font-size:14px;color:var(--muted);margin:4px 0 18px;font-weight:700;}
+  .logincard input{width:100%;padding:13px;border:1.5px solid #d7e2df;border-radius:11px;font-size:15px;font-family:inherit;margin-bottom:10px;}
+  .loginErr{color:var(--warm);font-size:13px;text-align:center;margin-top:10px;min-height:1px;}
+</style>
+</head>
+<body>
+<div class="loginwrap" id="loginwrap">
+  <div class="logincard"><div class="loginh">QuesMe Massage</div><div class="logint">샵 콘솔 로그인</div>
+    <input id="liId" placeholder="아이디 (샵에서 발급)" autocapitalize="off">
+    <input id="liPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="bigbtn" onclick="doLogin()">로그인</button><div class="loginErr" id="liErr"></div></div>
+</div>
+<div class="sc">
+  <div class="sc-top"><div><div class="t1" id="shopName">샵 콘솔</div><div class="t2" id="sub"></div></div><button class="logoutbtn" onclick="doLogout()">로그아웃</button></div>
+  <div class="tabs">
+    <div class="tab on" data-t="bookings" onclick="setTab('bookings')">🗓 예약</div>
+    <div class="tab" data-t="providers" onclick="setTab('providers')">💆 마사지사</div>
+    <div class="tab" data-t="rooms" onclick="setTab('rooms')">🚪 룸</div>
+    <div class="tab" data-t="services" onclick="setTab('services')">📋 시술</div>
+  </div>
+  <div class="body" id="body"></div>
+</div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
+  var slug = new URLSearchParams(location.search).get('store') || '';
+  var tab='bookings', providers=[], rooms=[], services=[], bookings=[], shop=null;
+  function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+  function byId(a,id){ for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
+
+  window.doLogin=function(){ var id=(document.getElementById('liId').value||'').trim(); if(id.indexOf('@')<0) id=id+'@thaimate.app'; document.getElementById('liErr').textContent='';
+    supa.auth.signInWithPassword({email:id,password:document.getElementById('liPw').value||''}).then(function(r){ if(r&&r.error) document.getElementById('liErr').textContent='로그인 실패'; }); };
+  window.doLogout=function(){ supa.auth.signOut(); };
+  window.setTab=function(t){ tab=t; Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(e){ e.classList.toggle('on', e.getAttribute('data-t')===t); }); render(); };
+
+  function load(){
+    Promise.all([
+      supa.from('qsm_shops').select('*').eq('slug',slug).maybeSingle(),
+      supa.from('qsm_providers').select('*').eq('store_slug',slug).order('sort'),
+      supa.from('qsm_rooms').select('*').eq('store_slug',slug).order('sort'),
+      supa.from('qsm_services').select('*').eq('store_slug',slug).order('sort'),
+      supa.from('qsm_bookings').select('*').eq('store_slug',slug).eq('book_date',today()).neq('status','cancelled').neq('status','done')
+    ]).then(function(r){ shop=r[0].data; providers=r[1].data||[]; rooms=r[2].data||[]; services=r[3].data||[]; bookings=r[4].data||[];
+      document.getElementById('shopName').textContent=(shop&&((shop.names||{}).ko||(shop.names||{}).en))||slug;
+      document.getElementById('sub').textContent='QuesMe Massage · '+slug; render(); });
+  }
+
+  // ---- CRUD ----
+  window.addProv=function(){ var n=v('p_name'); if(!n) return; supa.from('qsm_providers').insert({ store_slug:slug, name:n, login_id:v('p_login').toLowerCase(), tier:v('p_tier'), price_extra:parseInt(v('p_extra')||'0',10)||0, bio:v('p_bio'), freelance:document.getElementById('p_free').checked, outcall_ok:document.getElementById('p_out').checked, sort:providers.length+1 }).then(load); };
+  window.addRoom=function(){ var n=v('r_name'); if(!n) return; supa.from('qsm_rooms').insert({ store_slug:slug, name:n, type:v('r_type'), capacity:parseInt(v('r_cap')||'1',10)||1, sort:rooms.length+1 }).then(load); };
+  window.addSvc=function(){ var n=v('s_name'); if(!n) return; supa.from('qsm_services').insert({ store_slug:slug, name:n, duration_min:parseInt(v('s_dur')||'60',10)||60, price:parseInt(v('s_price')||'0',10)||null, sort:services.length+1 }).then(load); };
+  window.toggleActive=function(tbl,id,cur){ supa.from(tbl).update({active:!cur}).eq('id',id).then(load); };
+  window.del=function(tbl,id){ supa.from(tbl).delete().eq('id',id).then(load); };
+  window.advance=function(id,to){ supa.from('qsm_bookings').update({status:to}).eq('id',id).then(load); };
+  function v(id){ var e=document.getElementById(id); return e?(e.value||'').trim():''; }
+
+  function render(){
+    var b=document.getElementById('body');
+    if(tab==='providers'){
+      b.innerHTML='<div class="addbox"><div class="ttl">＋ 마사지사 추가 (풀 등록)</div>'+
+        '<input id="p_name" placeholder="이름"><div class="two"><input id="p_login" placeholder="로그인 아이디 (예: ploy)" autocapitalize="off"><select id="p_tier"><option value="regular">일반</option><option value="pretty">프리티</option></select></div>'+
+        '<div class="two"><input id="p_extra" placeholder="지명 추가요금 ฿ (예:150)" inputmode="numeric"><input id="p_bio" placeholder="한 줄 소개"></div>'+
+        '<div class="chk"><label><input type="checkbox" id="p_free"> 프리랜서</label><label><input type="checkbox" id="p_out"> 출장 가능</label></div>'+
+        '<button class="bigbtn" onclick="addProv()">추가</button></div>'+
+        (providers.length?providers.map(function(p){ var ini=(p.name||'?').charAt(0).toUpperCase();
+          return '<div class="row '+(p.active===false?'off':'')+'"><div class="av '+(p.tier==='pretty'?'pretty':'')+'">'+(p.avatar?'<img src="'+esc(p.avatar)+'">':esc(ini))+'</div>'+
+          '<div class="mid"><div class="nm">'+esc(p.name)+(p.tier==='pretty'?'<span class="tag pretty">프리티</span>':'')+(p.freelance?'<span class="tag free">프리</span>':'')+(p.outcall_ok?'<span class="tag out">출장</span>':'')+'</div>'+
+          '<div class="meta">아이디 <code>'+esc(p.login_id||'-')+'</code>'+(p.price_extra?' · +฿'+p.price_extra:'')+(p.bio?' · '+esc(p.bio):'')+'</div></div>'+
+          '<div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_providers\',\''+p.id+'\','+(p.active!==false)+')">'+(p.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_providers\',\''+p.id+'\')">삭제</button></div></div>';
+        }).join(''):'<div class="empty">마사지사를 추가하세요</div>');
+    } else if(tab==='rooms'){
+      var TY={private:'개인룸',shared:'공용',group:'단체룸'};
+      b.innerHTML='<div class="addbox"><div class="ttl">＋ 룸 추가</div><input id="r_name" placeholder="룸 이름 (예: 개인룸 1호)"><div class="two"><select id="r_type"><option value="private">개인룸</option><option value="shared">공용</option><option value="group">단체룸</option></select><input id="r_cap" placeholder="정원 (예:1)" inputmode="numeric"></div><button class="bigbtn" onclick="addRoom()">추가</button></div>'+
+        (rooms.length?rooms.map(function(r){ return '<div class="row '+(r.active===false?'off':'')+'"><div class="av">🚪</div><div class="mid"><div class="nm">'+esc(r.name)+'</div><div class="meta">'+(TY[r.type]||r.type)+' · '+(r.capacity||1)+'인</div></div><div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_rooms\',\''+r.id+'\','+(r.active!==false)+')">'+(r.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_rooms\',\''+r.id+'\')">삭제</button></div></div>'; }).join(''):'<div class="empty">룸을 추가하세요</div>');
+    } else if(tab==='services'){
+      b.innerHTML='<div class="addbox"><div class="ttl">＋ 시술 추가</div><input id="s_name" placeholder="시술명 (예: 타이 마사지)"><div class="two"><input id="s_dur" placeholder="소요(분) 예:60" inputmode="numeric"><input id="s_price" placeholder="가격 ฿ 예:300" inputmode="numeric"></div><button class="bigbtn" onclick="addSvc()">추가</button></div>'+
+        (services.length?services.map(function(s){ return '<div class="row '+(s.active===false?'off':'')+'"><div class="av">📋</div><div class="mid"><div class="nm">'+esc(s.name)+'</div><div class="meta">'+s.duration_min+'분'+(s.price?' · ฿'+s.price:'')+'</div></div><div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_services\',\''+s.id+'\','+(s.active!==false)+')">'+(s.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_services\',\''+s.id+'\')">삭제</button></div></div>'; }).join(''):'<div class="empty">시술을 추가하세요</div>');
+    } else {
+      b.innerHTML=(bookings.length?bookings.slice().sort(function(a,c){return (a.start_time||'~').localeCompare(c.start_time||'~');}).map(function(bk){
+        var svc=byId(services,bk.service_id), prov=byId(providers,bk.provider_id), room=byId(rooms,bk.room_id), out=bk.location_type==='outcall', serving=bk.status==='serving';
+        var where=out?('🚗 출장 '+esc(bk.address||'')):(room?esc(room.name):'-');
+        return '<div class="bk '+(serving?'serving':'')+'"><div class="tm"><div class="h">'+(bk.mode==='reserve'?(bk.start_time||''):'NOW')+'</div></div><div class="mid"><div class="nick">'+esc(bk.nick)+(prov?' → '+esc(prov.name):'')+'</div><div class="meta">'+(svc?esc(svc.name)+' · ':'')+where+'</div></div><div class="acts">'+(serving?'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'done\')">완료</button>':'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'serving\')">시작</button>')+'<button class="ibtn warn" onclick="advance(\''+bk.id+'\',\'cancelled\')">취소</button></div></div>';
+      }).join(''):'<div class="empty">오늘 예약이 없어요</div>');
+    }
+  }
+
+  supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
+  supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
+  function updateAuth(session){ document.getElementById('loginwrap').style.display=session?'none':'flex'; if(session && slug){ load(); } }
+  supa.channel('qsm-sc-'+slug).on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings',filter:'store_slug=eq.'+slug},function(){ load(); }).subscribe();
+})();
+</script>
+</body>
+</html>

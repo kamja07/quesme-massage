@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E7A5F">
+<title>QuesMe Massage · 샵 QR</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  .qrpage{min-height:100%; display:flex; flex-direction:column; align-items:center; padding:24px 16px; gap:16px;}
+  .poster{background:#fff; border:1px solid #e2e9e7; border-radius:20px; max-width:420px; width:100%; padding:30px 28px; text-align:center;}
+  .poster h2{margin:8px 0 2px; font-size:22px; color:var(--ink);}
+  .poster .nm{font-size:18px; font-weight:800; color:var(--teal);}
+  .poster .sub{color:var(--muted); font-size:13px; margin:2px 0 20px;}
+  .qrbox{display:inline-flex; padding:16px; background:#fff; border:1px solid #eef3f1; border-radius:16px;}
+  .qrbox img, .qrbox canvas{display:block; width:300px; height:300px;}
+  .steps{display:flex; justify-content:center; gap:16px; margin:20px 0 6px; font-size:12px; color:var(--muted);}
+  .steps b{display:block; color:var(--teal); font-size:15px;}
+  .urlline{font-size:11.5px; color:#9aa7a4; word-break:break-all; margin-top:10px;}
+  .actions{display:flex; gap:10px;} .qrfail{color:var(--warm); font-size:13px; padding:40px 10px;}
+  @media print{ body{background:#fff;} .noprint{display:none !important;} .poster{border:none;border-radius:0;box-shadow:none;max-width:none;} .qrpage{padding:0;} }
+</style>
+</head>
+<body>
+<div class="qrpage">
+  <div class="poster">
+    <div class="nm" id="shopName">QuesMe Massage</div>
+    <h2>QR 스캔하고 바로 예약</h2>
+    <p class="sub">앱 설치 없이 · 마사지사 지명 · 룸 · 출장까지</p>
+    <div class="qrbox" id="qrbox"><div class="qrfail" id="qrfail">QR 생성 중…</div></div>
+    <div class="steps"><div><b>1</b> 스캔</div><div><b>2</b> 시술·지명·시간</div><div><b>3</b> 순서 알림</div></div>
+    <div class="urlline" id="url"></div>
+  </div>
+  <div class="actions noprint"><button class="btn" onclick="window.print()">🖨 인쇄</button><a class="btn ghost" id="backCon">← 콘솔로</a></div>
+</div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+  var slug = new URLSearchParams(location.search).get('store') || 'sabai-thonglor';
+  var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
+  document.getElementById('backCon').href='shop-console.html?store='+encodeURIComponent(slug);
+  var custUrl = new URL('book.html?store='+encodeURIComponent(slug), location.href).href;
+  document.getElementById('url').textContent = custUrl;
+  supa.from('qsm_shops').select('names').eq('slug',slug).maybeSingle().then(function(r){
+    var n=(r.data&&r.data.names)||{}; document.getElementById('shopName').textContent=n.ko||n.en||n.th||slug;
+  });
+  function draw(){
+    var box=document.getElementById('qrbox');
+    if(typeof QRCode==='undefined'){ document.getElementById('qrfail').textContent='QR 라이브러리 로드 실패 (아래 주소 사용)'; return; }
+    box.innerHTML=''; new QRCode(box,{ text:custUrl, width:300, height:300, colorDark:'#16323A', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M });
+  }
+  if(document.readyState==='complete') draw(); else window.addEventListener('load', draw);
+})();
+</script>
+</body>
+</html>

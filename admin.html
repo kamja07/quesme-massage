@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#16323A">
+<script src="inapp.js"></script>
+<title>QuesMe Massage · 관리자</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  .adm{max-width:820px; margin:0 auto; min-height:100%; background:#fff;}
+  .adm-top{background:var(--ink); color:#fff; padding:14px 18px; display:flex; align-items:center; justify-content:space-between;}
+  .adm-top .t1{font-size:17px; font-weight:800;} .adm-top .t2{font-size:12px; opacity:.8;}
+  .logoutbtn{background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:8px; padding:6px 11px; font-size:12px; font-weight:700;}
+  .stats{display:flex; gap:10px; padding:14px 18px 4px;}
+  .stat{flex:1; background:#fbfdfc; border:1px solid #eef3f1; border-radius:13px; padding:13px; text-align:center;}
+  .stat .v{font-size:24px; font-weight:800; color:var(--teal);} .stat .k{font-size:12px; color:var(--muted); margin-top:2px;}
+  .sec{padding:14px 18px;} .sech{font-size:13px; font-weight:800; color:var(--ink); margin:4px 0 10px;}
+  .card{display:flex; align-items:center; gap:12px; padding:12px 13px; border:1px solid #eef3f1; border-radius:13px; margin-bottom:9px;}
+  .card .lg{width:46px;height:46px;flex:0 0 46px;border-radius:12px;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;}
+  .card .lg img{width:100%;height:100%;object-fit:cover;}
+  .card .mid{flex:1;min-width:0;} .card .nm{font-size:15px;font-weight:800;} .card .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .card .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .reqcard{border:1px solid #f0c674; background:#fffaf0;}
+  .empty{text-align:center; color:#9aa7a4; padding:24px; font-size:13px;}
+  .loginwrap{position:fixed; inset:0; background:#0c1a1f; display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px;}
+  .logincard{background:#fff; border-radius:18px; padding:28px 24px; width:100%; max-width:360px;}
+  .loginh{text-align:center; font-size:20px; font-weight:800; color:var(--teal);}
+  .logint{text-align:center; font-size:14px; color:var(--muted); margin:4px 0 18px; font-weight:700;}
+  .logincard input{width:100%; padding:13px; border:1.5px solid #d7e2df; border-radius:11px; font-size:15px; font-family:inherit; margin-bottom:10px;}
+  .logincard input:focus{outline:none; border-color:var(--teal);}
+  .loginErr{color:var(--warm); font-size:13px; text-align:center; margin-top:10px; min-height:1px;}
+  .loginAlt{text-align:center; font-size:13px; color:var(--muted); margin-top:16px; padding-top:15px; border-top:1px solid #eef3f1;}
+  .loginAlt a{color:var(--teal); font-weight:700; text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="loginwrap" id="loginwrap">
+  <div class="logincard">
+    <div class="loginh">QuesMe Massage</div>
+    <div class="logint">샵 · 관리자 로그인</div>
+    <input id="liId" placeholder="아이디 (샵에서 발급)" autocapitalize="off">
+    <input id="liPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="bigbtn" onclick="doLogin()">로그인</button>
+    <div class="loginErr" id="liErr"></div>
+    <div class="loginAlt">아직 샵이 없으신가요? <a href="register.html">샵 등록 신청 →</a></div>
+  </div>
+</div>
+<div class="adm">
+  <div class="adm-top"><div><div class="t1">QuesMe Massage 관리자</div><div class="t2" id="who"></div></div>
+    <button class="logoutbtn" onclick="doLogout()">로그아웃</button></div>
+  <div id="content"></div>
+</div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
+  var isSuper=false, myEmail='';
+  function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function shopName(s){ var n=s.names||{}; return n.ko||n.en||n.th||s.slug; }
+
+  window.doLogin=function(){
+    var id=(document.getElementById('liId').value||'').trim(); if(id.indexOf('@')<0) id=id+'@thaimate.app';
+    document.getElementById('liErr').textContent='';
+    supa.auth.signInWithPassword({ email:id, password:document.getElementById('liPw').value||'' }).then(function(r){ if(r&&r.error) document.getElementById('liErr').textContent='로그인 실패 — 아이디/비밀번호 확인'; });
+  };
+  window.doLogout=function(){ supa.auth.signOut(); };
+
+  function loadAll(){
+    Promise.all([ supa.rpc('qsm_is_super'), supa.from('qsm_staff').select('store_slug'), supa.from('qsm_bookings').select('store_slug').eq('book_date',today()).neq('status','cancelled') ]).then(function(r){
+      isSuper=!!(r[0]&&r[0].data);
+      var mySlugs=(r[1].data||[]).map(function(x){return x.store_slug;});
+      var counts={}; (r[2].data||[]).forEach(function(b){ counts[b.store_slug]=(counts[b.store_slug]||0)+1; });
+      document.getElementById('who').textContent = myEmail + (isSuper?' · 운영자':' · 샵 사장님');
+      if(isSuper){
+        Promise.all([ supa.from('qsm_shops').select('*'), supa.from('qsm_shop_requests').select('*').eq('status','pending').order('created_at') ])
+          .then(function(rr){ renderSuper(rr[0].data||[], rr[1].data||[], counts); });
+      } else {
+        supa.from('qsm_shops').select('*').then(function(rr){ renderOwner((rr.data||[]).filter(function(s){return mySlugs.indexOf(s.slug)>=0;}), counts); });
+      }
+    });
+  }
+  function shopCard(s,counts){
+    var n=counts[s.slug]||0; var logo=s.logo?'<img src="'+esc(s.logo)+'">':'💆';
+    return '<div class="card"><div class="lg">'+logo+'</div><div class="mid"><div class="nm">'+esc(shopName(s))+'</div>'+
+      '<div class="sub">'+(s.area?esc(s.area):'')+' · 오늘 예약 '+n+' · <code>'+esc(s.slug)+'</code></div></div>'+
+      '<div class="acts"><a class="btn sm" href="shop-console.html?store='+encodeURIComponent(s.slug)+'">콘솔</a>'+
+      '<a class="btn ghost sm" href="qr.html?store='+encodeURIComponent(s.slug)+'">QR</a></div></div>';
+  }
+  function renderSuper(shops,reqs,counts){
+    var totBk=Object.keys(counts).reduce(function(a,k){return a+counts[k];},0);
+    var html='<div class="stats"><div class="stat"><div class="v">'+shops.length+'</div><div class="k">샵</div></div>'+
+      '<div class="stat"><div class="v">'+totBk+'</div><div class="k">오늘 예약(합)</div></div>'+
+      '<div class="stat"><div class="v">'+reqs.length+'</div><div class="k">신청 대기</div></div></div>';
+    html+='<div class="sec"><div class="sech">📨 샵 등록 신청 ('+reqs.length+')</div>'+(reqs.length?reqs.map(function(q){
+      return '<div class="card reqcard"><div class="lg">💆</div><div class="mid"><div class="nm">'+esc(q.name||'')+'</div>'+
+        '<div class="sub">'+(q.area?esc(q.area)+' · ':'')+'코드 <code>'+esc(q.desired_slug)+'</code> · 아이디 <code>'+esc(q.owner_login)+'</code>'+(q.contact?' · '+esc(q.contact):'')+'</div></div>'+
+        '<div class="acts"><button class="btn sm" onclick="approve(\''+q.id+'\')">승인</button><button class="btn gray sm" onclick="reject(\''+q.id+'\')">반려</button></div></div>';
+    }).join(''):'<div class="empty">대기 중인 신청 없음</div>')+'</div>';
+    html+='<div class="sec"><div class="sech">🏪 전체 샵 ('+shops.length+')</div>'+(shops.length?shops.sort(function(a,b){return (a.slug||'').localeCompare(b.slug||'');}).map(function(s){return shopCard(s,counts);}).join(''):'<div class="empty">샵 없음</div>')+'</div>';
+    document.getElementById('content').innerHTML=html;
+  }
+  function renderOwner(mine,counts){
+    document.getElementById('content').innerHTML='<div class="sec"><div class="sech">🏪 내 샵 ('+mine.length+')</div>'+(mine.length?mine.map(function(s){return shopCard(s,counts);}).join(''):'<div class="empty">관리 중인 샵이 없어요. 운영자에게 문의하세요.</div>')+'</div>';
+  }
+  window.approve=function(id){
+    supa.from('qsm_shop_requests').select('*').eq('id',id).maybeSingle().then(function(r){
+      var q=r.data; if(!q) return;
+      supa.from('qsm_shops').insert({ slug:q.desired_slug, names:{ko:q.name}, area:q.area, status:'active' }).then(function(){
+        supa.from('qsm_staff').insert({ email:(q.owner_login||'')+'@thaimate.app', store_slug:q.desired_slug }).then(function(){
+          supa.from('qsm_shop_requests').update({status:'approved'}).eq('id',id).then(function(){ loadAll(); });
+        });
+      });
+    });
+  };
+  window.reject=function(id){ supa.from('qsm_shop_requests').update({status:'rejected'}).eq('id',id).then(function(){ loadAll(); }); };
+
+  supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
+  supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
+  function updateAuth(session){ document.getElementById('loginwrap').style.display=session?'none':'flex'; if(session){ myEmail=(session.user&&session.user.email)||''; loadAll(); } }
+})();
+</script>
+</body>
+</html>
