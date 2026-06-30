@@ -60,6 +60,8 @@
   .photo .pr{position:absolute; top:2px; right:2px; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; line-height:1;}
   .photo.main::after{content:'대표'; position:absolute; bottom:0; left:0; right:0; background:rgba(14,122,95,.85); color:#fff; font-size:9px; font-weight:800; text-align:center; padding:1px;}
   .addphoto{width:72px; height:90px; border:1.5px dashed #c7d3cf; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:24px; color:#9aa7a4; cursor:pointer;}
+  .pmsave{position:sticky; bottom:0; background:#fff; margin:16px -18px 0; padding:12px 18px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid #eef3f1; box-shadow:0 -5px 14px rgba(0,0,0,.05);}
+  .pmsave .bigbtn{margin:0;}
 </style>
 </head>
 <body>
@@ -138,7 +140,7 @@
       '<label>사이즈</label><input id="e_stats" value="'+esc(p.stats||'')+'" placeholder="34-24-36">'+
       '<label>사진 (첫 장이 대표 사진)</label><div class="photos" id="e_photos"></div>'+
       '<div class="chk"><label><input type="checkbox" id="e_free"'+(p.freelance?' checked':'')+'> 프리랜서</label><label><input type="checkbox" id="e_out"'+(p.outcall_ok?' checked':'')+'> 출장 가능</label><label><input type="checkbox" id="e_active"'+(p.active!==false?' checked':'')+'> 손님 노출</label></div>'+
-      '<button class="bigbtn" style="margin-top:16px" onclick="saveProv()">저장</button>';
+      '<div class="pmsave"><button class="bigbtn" onclick="saveProv()">저장</button></div>';
     renderEditPhotos();
     document.getElementById('pmwrap').classList.add('on');
   };
@@ -177,11 +179,9 @@
       b.innerHTML='<div class="addbox"><div class="ttl">＋ 마사지사 추가 (풀 등록)</div>'+
         '<input id="p_name" placeholder="이름"><div class="two"><input id="p_login" placeholder="로그인 아이디 (예: ploy)" autocapitalize="off"><select id="p_tier"><option value="regular">전문</option><option value="pretty">프리티</option></select></div>'+
         '<div class="two"><input id="p_extra" placeholder="지명 추가요금 ฿ (예:150)" inputmode="numeric"><input id="p_bio" placeholder="한 줄 소개"></div>'+
-        '<div class="ttl" style="margin:4px 0 7px">프로필 (프리티 등)</div>'+
-        '<div class="two"><input id="p_age" placeholder="나이" inputmode="numeric"><input id="p_height" placeholder="키 cm" inputmode="numeric"></div>'+
-        '<div class="two"><input id="p_weight" placeholder="몸무게 kg" inputmode="numeric"><input id="p_stats" placeholder="사이즈 (예: 34-24-36)"></div>'+
         '<div class="chk"><label><input type="checkbox" id="p_free"> 프리랜서</label><label><input type="checkbox" id="p_out"> 출장 가능</label></div>'+
-        '<button class="bigbtn" onclick="addProv()">추가</button></div>'+
+        '<button class="bigbtn" onclick="addProv()">＋ 등록</button>'+
+        '<div style="font-size:11.5px;color:#9aa7a4;margin-top:8px;text-align:center">등록 후 <b>편집</b>에서 사진·나이·키·사이즈를 추가하세요</div></div>'+
         (providers.length?providers.map(function(p){ var ini=(p.name||'?').charAt(0).toUpperCase();
           var ph=(p.photos&&p.photos.length)?p.photos[0]:(p.avatar||null);
           var stat=p.age?(p.age+'세'+(p.height?'·'+p.height+'cm':'')+(p.stats?'·'+esc(p.stats):'')):'';
