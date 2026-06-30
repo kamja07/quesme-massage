@@ -100,6 +100,26 @@
   .ttable{display:grid; grid-template-columns:repeat(4,1fr); gap:7px;}
   .tcell{padding:12px 0; border:1.5px solid #e2e9e7; border-radius:11px; background:#fff; font-size:14.5px; font-weight:700; color:var(--ink); cursor:pointer; font-family:inherit;}
   .tcell.on{border-color:var(--teal); background:var(--teal); color:#fff;}
+  /* 예약금 입금 */
+  .paywrap{max-width:480px; margin:0 auto;}
+  .payhd{font-size:18px; font-weight:800; color:var(--ink); margin:4px 0 14px;}
+  .depbox{display:flex; justify-content:space-between; align-items:center; background:#fff8e6; border:1px solid #ffe7a0; border-radius:13px; padding:14px 16px; margin:14px 0;}
+  .depbox span{font-size:13.5px; font-weight:700; color:#9a6a00;} .depbox b{font-size:21px; color:#9a6a00;}
+  .paytabs{display:flex; gap:7px; margin-bottom:11px;}
+  .ptab{flex:1; padding:11px; border-radius:11px; border:1.5px solid #e2e9e7; background:#fff; font-size:13.5px; font-weight:700; color:var(--muted); font-family:inherit;}
+  .ptab.on{border-color:var(--teal); background:var(--teal); color:#fff;}
+  .acctbox{background:#fbfdfc; border:1px solid #eef3f1; border-radius:13px; padding:6px 14px;}
+  .acctbox .ar{display:flex; justify-content:space-between; gap:12px; padding:10px 0; font-size:14px; border-bottom:1px solid #f1f4f3;}
+  .acctbox .ar:last-child{border-bottom:none;} .acctbox .ar span{color:var(--muted);} .acctbox .ar b{color:var(--ink); text-align:right;}
+  .acctbox .cp{cursor:pointer; color:var(--teal);}
+  .qrbox{text-align:center; background:#fbfdfc; border:1px solid #eef3f1; border-radius:13px; padding:16px;}
+  .qrbox img{width:200px; height:200px; object-fit:contain;} .qrcap{font-size:12.5px; color:var(--muted); margin-top:8px;}
+  .paynote{font-size:12.5px; color:var(--muted); line-height:1.55; background:#fbfdfc; border:1px solid #eef3f1; border-radius:11px; padding:11px 13px; margin-top:11px;}
+  .sliphd{font-size:14px; font-weight:800; color:var(--ink); margin:18px 0 9px;}
+  .slipup{display:flex; align-items:center; justify-content:center; gap:6px; padding:26px; border:1.5px dashed #cdd9d6; border-radius:13px; background:#fbfdfc; color:var(--teal); font-weight:700; font-size:14.5px; cursor:pointer;}
+  .slippic{position:relative; border-radius:13px; overflow:hidden; border:1px solid #eef3f1;}
+  .slippic img{width:100%; display:block; max-height:360px; object-fit:contain; background:#000;}
+  .slipx{position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,.6); color:#fff; border:none; font-size:15px; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -242,16 +262,32 @@
       if(!provFit || !roomFit){ err.textContent=t('spa.noSlot'); return; }
     }
     var id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'x'+Math.random().toString(36).slice(2)+Date.now();
+    var dep=(store&&store.pay&&store.pay.deposit)?(parseInt(store.pay.deposit,10)||0):0;   // 샵이 정한 예약금
     var row={ id:id, store_slug:slug, nick:nick, lang:lang, service_id:sel.svc, provider_id:sel.prov||null,
       room_id:isOut?null:sel.room, location_type:isOut?'outcall':'shop', address:isOut?(sel.addr||'').trim():null, travel_fee:isOut?OUTCALL_FEE:0,
       mode:sel.mode==='reserve'?'reserve':'walkin', book_date:todayStr(), start_time:sel.mode==='reserve'?sel.slot:null,
-      duration_min:svc?svc.duration_min:60, status:'waiting', cno:genCno() };
+      duration_min:svc?svc.duration_min:60, status:'waiting', cno:genCno(),
+      deposit:dep, pay_status:dep>0?'unpaid':'confirmed' };
+    payMethod=null; paySlip=null;
     document.getElementById('bookBtn').disabled=true;
-    supa.from('qsm_bookings').insert(row).then(function(res){
-      if(res&&res.error){ err.textContent='예약 실패 — 잠시 후 다시'; document.getElementById('bookBtn').disabled=false; return; }
-      setMyId(id); myBooking=row; render();
-    }).catch(function(){ err.textContent='예약 실패 — 잠시 후 다시'; document.getElementById('bookBtn').disabled=false; });
+    insertBooking(row, dep>0);
   };
+  function insertBooking(row, withPay){
+    var err=document.getElementById('err');
+    var fail=function(){ if(err)err.textContent='예약 실패 — 잠시 후 다시'; var bb=document.getElementById('bookBtn'); if(bb)bb.disabled=false; };
+    supa.from('qsm_bookings').insert(row).then(function(res){
+      if(res&&res.error){
+        // 마이그레이션(qsm_deposit.sql) 전이면 deposit/pay_status 컬럼이 없어 실패 → 결제 없이 재시도
+        if(withPay && /deposit|pay_status|column/i.test(res.error.message||'')){
+          var r2={}; for(var k in row){ if(k!=='deposit'&&k!=='pay_status') r2[k]=row[k]; }
+          return insertBooking(r2, false);
+        }
+        return fail();
+      }
+      if(!withPay){ row.pay_status='confirmed'; row.deposit=0; }
+      setMyId(row.id); myBooking=row; render();
+    }).catch(fail);
+  }
   window.cancelBooking=function(){
     var id=myId(); if(!id) return;
     supa.from('qsm_bookings').update({status:'cancelled'}).eq('id',id).then(function(){ setMyId(null); myBooking=null; step=0; loadMine(); });
@@ -337,7 +373,11 @@
   function render(){
     chrome();
     var el=document.getElementById('body');
-    if(myBooking && (myBooking.status==='waiting'||myBooking.status==='serving')){ el.innerHTML=ticket(myBooking); return; }
+    if(myBooking){
+      if(myBooking.pay_status==='unpaid'){ el.innerHTML=paymentScreen(myBooking); return; }
+      if(myBooking.pay_status==='submitted'){ el.innerHTML=pendingPay(myBooking); return; }
+      if(myBooking.status==='waiting'||myBooking.status==='serving'){ el.innerHTML=ticket(myBooking); return; }
+    }
     var isRes=sel.mode==='reserve';
     var modeTabs='<div class="modetabs"><button class="mtab '+(!isRes?'on':'')+'" onclick="setMode(\'now\')">'+t('spa.walkin')+'</button>'+
       '<button class="mtab '+(isRes?'on':'')+'" onclick="setMode(\'reserve\')">'+t('spa.reserve')+'</button></div>';
@@ -390,23 +430,92 @@
     el.innerHTML=stepWrap(3, t('spa.where'), locTabs+placeBody+bookSummary()+'<div class="err" id="err"></div>', { back:true, book:true, ok:ok, total:3 });
   }
 
-  function ticket(b){
+  function bookingRows(b){
     var svc=byId(services,b.service_id), prov=b.provider_id?byId(providers,b.provider_id):null, room=byId(rooms,b.room_id);
-    var serving=b.status==='serving';
     var isOut=b.location_type==='outcall';
     var whenTxt = b.mode==='reserve' ? (t('spa.today')+' '+(b.start_time||'')) : t('spa.now');
     var whereTxt = isOut ? ('🚗 '+t('spa.locOutcall')+(b.address?' · '+esc(b.address):'')) : ('🏠 '+t('spa.locShop'));
-    return '<div class="tk"><div class="big">'+t('spa.booked')+' 🎉</div>'+
-      '<div class="nick">'+t('lbl.myNick')+' <b>'+esc(b.nick)+'</b> · '+tn('lbl.custNo',b.cno)+'</div>'+
-      '<div class="rows">'+
-        '<div class="r"><span class="k">'+t('spa.lblWhere')+'</span><span class="v">'+whereTxt+'</span></div>'+
-        '<div class="r"><span class="k">'+t('spa.lblSvc')+'</span><span class="v">'+(svc?esc(svc.name)+' · '+tn('spa.min',svc.duration_min):'-')+'</span></div>'+
+    return '<div class="rows">'+
         '<div class="r"><span class="k">'+t('spa.lblWho')+'</span><span class="v">'+(prov?esc(prov.name)+(prov.tier==='pretty'?' ⭐':''):t('spa.anyone'))+'</span></div>'+
+        '<div class="r"><span class="k">'+t('spa.lblWhen')+'</span><span class="v">'+whenTxt+'</span></div>'+
+        '<div class="r"><span class="k">'+t('spa.lblSvc')+'</span><span class="v">'+(svc?esc(svc.name)+' · '+tn('spa.min',svc.duration_min):'-')+'</span></div>'+
+        '<div class="r"><span class="k">'+t('spa.lblWhere')+'</span><span class="v">'+whereTxt+'</span></div>'+
         (isOut?'':'<div class="r"><span class="k">'+t('spa.lblRoom')+'</span><span class="v">'+(room?esc(room.name)+' · '+t('spa.room.'+(room.type||'private')):'-')+'</span></div>')+
         (isOut&&b.travel_fee?'<div class="r"><span class="k">'+t('spa.travelFee')+'</span><span class="v">฿'+b.travel_fee+'</span></div>':'')+
-        '<div class="r"><span class="k">'+t('spa.lblWhen')+'</span><span class="v">'+whenTxt+'</span></div>'+
-      '</div>'+
+        (b.deposit?'<div class="r"><span class="k">'+t('pay.deposit')+'</span><span class="v">฿'+b.deposit+(b.pay_status==='confirmed'?' ✅':'')+'</span></div>':'')+
+      '</div>';
+  }
+  function ticket(b){
+    var serving=b.status==='serving';
+    return '<div class="tk"><div class="big">'+t('spa.booked')+' 🎉</div>'+
+      '<div class="nick">'+t('lbl.myNick')+' <b>'+esc(b.nick)+'</b> · '+tn('lbl.custNo',b.cno)+'</div>'+
+      bookingRows(b)+
       '<div class="status '+(serving?'serving':'')+'">'+(serving?'💆 '+t('spa.statusServing'):'🔔 '+t('spa.statusWait'))+'</div>'+
+      '<button class="btn gray block sm" style="margin-top:12px" onclick="cancelBooking()">'+t('spa.cancel')+'</button></div>';
+  }
+  // ===== 예약금 입금 + 송금 슬립 =====
+  var payMethod=null, paySlip=null;
+  function shopPay(){ return (store&&store.pay)||{}; }
+  function payMethods(){ var p=shopPay(), o=[]; if(p.thai&&(p.thai.acc||p.thai.name))o.push('thai'); if(p.korea&&(p.korea.acc||p.korea.name))o.push('korea'); if(p.qr)o.push('qr'); return o; }
+  function payDetail(m){ var p=shopPay();
+    if(m==='qr') return p.qr?'<div class="qrbox"><img src="'+esc(p.qr)+'"><div class="qrcap">'+t('pay.scan')+'</div></div>':'';
+    var a=p[m]||{};
+    return '<div class="acctbox">'+
+      (a.bank?'<div class="ar"><span>'+t('pay.bank')+'</span><b>'+esc(a.bank)+'</b></div>':'')+
+      (a.acc?'<div class="ar"><span>'+t('pay.acc')+'</span><b class="cp" data-v="'+esc(a.acc)+'" onclick="copyTxt(this)">'+esc(a.acc)+' 📋</b></div>':'')+
+      (a.name?'<div class="ar"><span>'+t('pay.holder')+'</span><b>'+esc(a.name)+'</b></div>':'')+
+      '</div>';
+  }
+  window.copyTxt=function(el){ var v=el.getAttribute('data-v'); try{ navigator.clipboard.writeText(v); }catch(e){} var o=el.textContent; el.textContent=t('pay.copied'); setTimeout(function(){ el.textContent=o; },1100); };
+  window.setPayMethod=function(m){ payMethod=m; render(); };
+  window.addSlip=function(input){ var f=input.files&&input.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onerror=function(){ alert(t('pay.readErr')); input.value=''; };
+    r.onload=function(){ var img=new Image();
+      img.onerror=function(){ alert(t('pay.fmtErr')); input.value=''; };
+      img.onload=function(){ var max=900,w=img.width,h=img.height;
+        if(w>h){ if(w>max){h=Math.round(h*max/w);w=max;} } else { if(h>max){w=Math.round(w*max/h);h=max;} }
+        var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+        try{ paySlip=cv.toDataURL('image/jpeg',0.6); }catch(e){ alert('이미지 처리 실패'); }
+        input.value=''; render();
+      }; img.src=r.result; };
+    r.readAsDataURL(f);
+  };
+  window.clearSlip=function(){ paySlip=null; render(); };
+  window.submitSlip=function(){ var id=myId(); if(!id||!paySlip) return;
+    var btn=document.querySelector('.paywrap .bigbtn'); if(btn){ btn.disabled=true; btn.textContent='…'; }
+    var patch={ pay_slip:paySlip, pay_method:payMethod, pay_status:'submitted' };
+    supa.from('qsm_bookings').update(patch).eq('id',id).then(function(res){
+      if(res&&res.error){ var e=document.getElementById('err'); if(e)e.textContent=t('pay.submitErr'); if(btn){btn.disabled=false;btn.textContent=t('pay.submit');} return; }
+      if(myBooking){ myBooking.pay_slip=paySlip; myBooking.pay_method=payMethod; myBooking.pay_status='submitted'; }
+      render();
+    }).catch(function(){ if(btn){btn.disabled=false;btn.textContent=t('pay.submit');} });
+  };
+  function paymentScreen(b){
+    var methods=payMethods();
+    if(!payMethod || methods.indexOf(payMethod)<0) payMethod=methods[0]||null;
+    var tabs = methods.length>1 ? '<div class="paytabs">'+methods.map(function(m){ return '<button class="ptab '+(payMethod===m?'on':'')+'" onclick="setPayMethod(\''+m+'\')">'+t('pay.m.'+m)+'</button>'; }).join('')+'</div>' : '';
+    var detail = payMethod ? payDetail(payMethod) : '<div class="meta" style="color:#9aa7a4">'+t('pay.noAcct')+'</div>';
+    var note = shopPay().note ? '<div class="paynote">'+esc(shopPay().note)+'</div>' : '';
+    var slip = paySlip
+      ? '<div class="slippic"><img src="'+esc(paySlip)+'"><button class="slipx" onclick="clearSlip()">✕</button></div>'
+      : '<label class="slipup">📷 '+t('pay.upload')+'<input type="file" accept="image/*" style="display:none" onchange="addSlip(this)"></label>';
+    return '<div class="paywrap">'+
+      '<div class="payhd">💳 '+t('pay.title')+'</div>'+
+      bookingRows(b)+
+      '<div class="depbox"><span>'+t('pay.deposit')+'</span><b>฿'+(b.deposit||0)+'</b></div>'+
+      tabs+detail+note+
+      '<div class="sliphd">'+t('pay.slipHd')+'</div>'+slip+
+      '<button class="bigbtn" style="margin-top:14px" '+(paySlip?'':'disabled')+' onclick="submitSlip()">'+t('pay.submit')+'</button>'+
+      '<div class="err" id="err"></div>'+
+      '<button class="btn gray block sm" style="margin-top:8px" onclick="cancelBooking()">'+t('spa.cancel')+'</button></div>';
+  }
+  function pendingPay(b){
+    return '<div class="tk"><div class="big">⏳ '+t('pay.waitTitle')+'</div>'+
+      '<div class="nick">'+tn('lbl.custNo',b.cno)+'</div>'+
+      bookingRows(b)+
+      (b.pay_slip?'<div class="slippic" style="margin-top:6px"><img src="'+esc(b.pay_slip)+'"></div>':'')+
+      '<div class="status">🧾 '+t('pay.waitMsg')+'</div>'+
       '<button class="btn gray block sm" style="margin-top:12px" onclick="cancelBooking()">'+t('spa.cancel')+'</button></div>';
   }
 

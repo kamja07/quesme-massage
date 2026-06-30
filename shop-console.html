@@ -99,6 +99,7 @@
   <div class="tabs">
     <div class="tab on" data-t="schedule" onclick="setTab('schedule')">📅 스케줄</div>
     <div class="tab" data-t="bookings" onclick="setTab('bookings')">🗓 예약</div>
+    <div class="tab" data-t="pay" onclick="setTab('pay')">💵 입금</div>
     <div class="tab" data-t="providers" onclick="setTab('providers')">💆 마사지사</div>
     <div class="tab" data-t="rooms" onclick="setTab('rooms')">🚪 룸</div>
     <div class="tab" data-t="services" onclick="setTab('services')">📋 시술</div>
@@ -282,6 +283,40 @@
   };
   window.closeEdit=function(){ document.getElementById('pmwrap').classList.remove('on'); editId=null; };
 
+  // ===== 입금 설정 / 확인 =====
+  window.savePay=function(qr){
+    var p={ deposit: parseInt(v('pay_dep'),10)||0,
+      thai:{ bank:v('pay_tb'), acc:v('pay_ta'), name:v('pay_tn') },
+      korea:{ bank:v('pay_kb'), acc:v('pay_ka'), name:v('pay_kn') },
+      qr: (typeof qr==='string') ? qr : ((shop&&shop.pay&&shop.pay.qr)||''),
+      note: v('pay_note') };
+    supa.from('qsm_shops').update({pay:p}).eq('slug',slug).then(function(res){
+      if(res&&res.error){ alert('저장 실패: '+(res.error.message||res.error)); return; }
+      if(shop) shop.pay=p; render(); if(typeof qr!=='string') alert('입금 정보 저장됐어요');
+    });
+  };
+  window.addQR=function(input){ var f=input.files&&input.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onerror=function(){ alert('이미지를 읽지 못했어요'); input.value=''; };
+    r.onload=function(){ var img=new Image();
+      img.onerror=function(){ alert('지원되지 않는 형식이에요 (HEIC 등). JPG/PNG로 올려주세요.'); input.value=''; };
+      img.onload=function(){ var max=600,w=img.width,h=img.height;
+        if(w>h){ if(w>max){h=Math.round(h*max/w);w=max;} } else { if(h>max){w=Math.round(w*max/h);h=max;} }
+        var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+        try{ savePay(cv.toDataURL('image/jpeg',0.7)); }catch(e){ alert('이미지 처리 실패'); }
+        input.value='';
+      }; img.src=r.result; };
+    r.readAsDataURL(f);
+  };
+  window.removeQR=function(){ savePay(''); };
+  window.confirmPay=function(id){ supa.from('qsm_bookings').update({pay_status:'confirmed'}).eq('id',id).then(function(res){ if(res&&res.error){alert('확인 실패: '+(res.error.message||res.error));return;} load(); }); };
+  window.viewSlip=function(id){ var bk=byId(bookings,id); if(!bk||!bk.pay_slip){ alert('제출된 슬립이 없어요'); return; }
+    document.getElementById('pmodal').innerHTML='<div class="pmh"><div class="t">🧾 송금 슬립 — '+esc(bk.nick)+'</div><button class="x" onclick="closeEdit()">✕</button></div>'+
+      '<div style="padding:14px"><img src="'+esc(bk.pay_slip)+'" style="width:100%;border-radius:10px;display:block"></div>'+
+      '<div class="pmsave"><button class="bigbtn" onclick="confirmPay(\''+bk.id+'\');closeEdit()">💵 입금 확인</button></div>';
+    document.getElementById('pmwrap').classList.add('on');
+  };
+
   function render(){
     var b=document.getElementById('body');
     if(tab==='schedule'){ renderSched(); return; }
@@ -308,11 +343,35 @@
       var STIER={all:'공통',regular:'전문',pretty:'프리티'};
       b.innerHTML='<div class="addbox"><div class="ttl">＋ 시술/요금 추가 (시간·옵션·가격 직접 입력)</div><input id="s_name" placeholder="시술/옵션명 (예: 타이 마사지)"><div class="two"><select id="s_tier"><option value="regular">전문 요금</option><option value="pretty">프리티 요금</option><option value="all">공통</option></select><input id="s_dur" placeholder="소요(분) 예:60" inputmode="numeric"></div><input id="s_price" placeholder="가격 ฿ 예:300" inputmode="numeric"><button class="bigbtn" onclick="addSvc()">추가</button></div>'+
         (services.length?services.slice().sort(function(a,c){return (a.tier||'').localeCompare(c.tier||'')||(a.duration_min||0)-(c.duration_min||0);}).map(function(s){ var st=s.tier==='pretty'?'pretty':'regular'; return '<div class="row '+(s.active===false?'off':'')+'"><div class="av">📋</div><div class="mid"><div class="nm">'+esc(s.name)+'<span class="tag '+st+'">'+(STIER[s.tier]||'공통')+'</span></div><div class="meta">'+s.duration_min+'분'+(s.price?' · ฿'+s.price:'')+'</div></div><div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_services\',\''+s.id+'\','+(s.active!==false)+')">'+(s.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_services\',\''+s.id+'\')">삭제</button></div></div>'; }).join(''):'<div class="empty">시술/요금을 추가하세요</div>');
+    } else if(tab==='pay'){
+      var p=(shop&&shop.pay)||{}, th=p.thai||{}, ko=p.korea||{};
+      var sl='font-size:12px;font-weight:800;color:var(--muted);margin:14px 0 6px';
+      var submitted=bookings.filter(function(b){return b.pay_status==='submitted';});
+      b.innerHTML='<div class="addbox"><div class="ttl">💵 예약금 · 입금 계좌</div>'+
+          '<input id="pay_dep" placeholder="예약금 ฿ (예:200)" inputmode="numeric" value="'+(p.deposit!=null?p.deposit:'')+'">'+
+          '<div style="'+sl+'">🇹🇭 태국 계좌</div>'+
+          '<input id="pay_tb" placeholder="은행 (예: Kasikorn)" value="'+esc(th.bank||'')+'">'+
+          '<div class="two"><input id="pay_ta" placeholder="계좌번호" value="'+esc(th.acc||'')+'" autocapitalize="off"><input id="pay_tn" placeholder="예금주" value="'+esc(th.name||'')+'"></div>'+
+          '<div style="'+sl+'">🇰🇷 한국 계좌</div>'+
+          '<input id="pay_kb" placeholder="은행 (예: 국민)" value="'+esc(ko.bank||'')+'">'+
+          '<div class="two"><input id="pay_ka" placeholder="계좌번호" value="'+esc(ko.acc||'')+'" autocapitalize="off"><input id="pay_kn" placeholder="예금주" value="'+esc(ko.name||'')+'"></div>'+
+          '<div style="'+sl+'">📱 QR (PromptPay 등)</div>'+
+          '<div id="qrprev">'+(p.qr?'<img src="'+esc(p.qr)+'" style="width:120px;height:120px;object-fit:contain;border:1px solid #eef3f1;border-radius:10px;vertical-align:middle"> <button class="ibtn warn" onclick="removeQR()">QR 삭제</button>':'<label class="addphoto" style="width:120px;height:120px">＋ QR<input type="file" accept="image/*" style="display:none" onchange="addQR(this)"></label>')+'</div>'+
+          '<textarea id="pay_note" placeholder="안내문 (예: 입금 후 슬립을 올려주세요)" style="width:100%;min-height:54px;margin-top:10px;padding:11px;border:1.5px solid #e2e9e7;border-radius:10px;font-family:inherit;font-size:14px">'+esc(p.note||'')+'</textarea>'+
+          '<button class="bigbtn" onclick="savePay()">저장</button>'+
+          '<div style="font-size:11.5px;color:#9aa7a4;margin-top:8px;text-align:center">예약금을 0 또는 비워두면 손님은 입금 없이 바로 예약돼요.</div></div>'+
+        '<div class="ttl" style="margin:18px 2px 10px">🧾 입금 확인 대기 ('+submitted.length+')</div>'+
+        (submitted.length?submitted.map(function(bk){ var prov=byId(providers,bk.provider_id); var pm=bk.pay_method==='korea'?'한국계좌':bk.pay_method==='qr'?'QR':'태국계좌';
+          return '<div class="row"><div class="av" style="cursor:pointer" onclick="viewSlip(\''+bk.id+'\')">'+(bk.pay_slip?'<img src="'+esc(bk.pay_slip)+'">':'🧾')+'</div>'+
+            '<div class="mid"><div class="nm">'+esc(bk.nick)+(prov?' → '+esc(prov.name):'')+'</div><div class="meta">'+(bk.mode==='reserve'?(bk.start_time||''):'NOW')+' · 예약금 ฿'+(bk.deposit||0)+' · '+pm+'</div></div>'+
+            '<div class="acts"><button class="ibtn" onclick="viewSlip(\''+bk.id+'\')">슬립</button><button class="ibtn" style="background:var(--teal);color:#fff" onclick="confirmPay(\''+bk.id+'\')">입금확인</button><button class="ibtn warn" onclick="advance(\''+bk.id+'\',\'cancelled\')">취소</button></div></div>';
+        }).join(''):'<div class="empty">대기 중인 입금이 없어요</div>');
     } else {
       b.innerHTML=(bookings.length?bookings.slice().sort(function(a,c){return (a.start_time||'~').localeCompare(c.start_time||'~');}).map(function(bk){
         var svc=byId(services,bk.service_id), prov=byId(providers,bk.provider_id), room=byId(rooms,bk.room_id), out=bk.location_type==='outcall', serving=bk.status==='serving';
         var where=out?('🚗 출장 '+esc(bk.address||'')):(room?esc(room.name):'-');
-        return '<div class="bk '+(serving?'serving':'')+'"><div class="tm"><div class="h">'+(bk.mode==='reserve'?(bk.start_time||''):'NOW')+'</div></div><div class="mid"><div class="nick">'+esc(bk.nick)+(prov?' → '+esc(prov.name):'')+'</div><div class="meta">'+(svc?esc(svc.name)+' · ':'')+where+'</div></div><div class="acts">'+(serving?'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'done\')">완료</button>':'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'serving\')">시작</button>')+'<button class="ibtn warn" onclick="advance(\''+bk.id+'\',\'cancelled\')">취소</button></div></div>';
+        var payb=bk.deposit?(bk.pay_status==='confirmed'?' · 💵확인':bk.pay_status==='submitted'?' · 🧾확인대기':' · ⏳입금전'):'';
+        return '<div class="bk '+(serving?'serving':'')+'"><div class="tm"><div class="h">'+(bk.mode==='reserve'?(bk.start_time||''):'NOW')+'</div></div><div class="mid"><div class="nick">'+esc(bk.nick)+(prov?' → '+esc(prov.name):'')+'</div><div class="meta">'+(svc?esc(svc.name)+' · ':'')+where+payb+'</div></div><div class="acts">'+(serving?'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'done\')">완료</button>':'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'serving\')">시작</button>')+'<button class="ibtn warn" onclick="advance(\''+bk.id+'\',\'cancelled\')">취소</button></div></div>';
       }).join(''):'<div class="empty">오늘 예약이 없어요</div>');
     }
   }
