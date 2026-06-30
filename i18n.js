@@ -149,7 +149,7 @@
     'spa.cancel': { ko:'예약 취소', en:'Cancel', th:'ยกเลิก', zh:'取消', ja:'キャンセル', hi:'रद्द करें', ru:'Отменить' },
     'spa.today': { ko:'오늘', en:'Today', th:'วันนี้', zh:'今天', ja:'本日', hi:'आज', ru:'Сегодня' },
     'spa.tier.pretty': { ko:'프리티', en:'Pretty', th:'พริตตี้', zh:'精选', ja:'プリティ', hi:'प्रीमियम', ru:'Премиум' },
-    'spa.tier.regular': { ko:'일반', en:'Regular', th:'ทั่วไป', zh:'普通', ja:'一般', hi:'सामान्य', ru:'Обычный' },
+    'spa.tier.regular': { ko:'전문', en:'Pro', th:'มืออาชีพ', zh:'专业', ja:'専門', hi:'विशेषज्ञ', ru:'Профи' },
     'spa.extra': { ko:'추가 +฿{n}', en:'+฿{n}', th:'+฿{n}', zh:'+฿{n}', ja:'+฿{n}', hi:'+฿{n}', ru:'+฿{n}' },
     'spa.firstHint': { ko:'마사지사를 보고 직접 골라보세요', en:'Browse and pick your therapist', th:'เลือกหมอนวดที่คุณชอบ', zh:'浏览并选择按摩师', ja:'セラピストを見て選べます', hi:'थेरेपिस्ट देखकर चुनें', ru:'Выберите мастера по профилю' },
     'spa.where': { ko:'어디서 받으실래요?', en:'Where?', th:'รับบริการที่ไหน?', zh:'在哪里？', ja:'どこで？', hi:'कहाँ?', ru:'Где?' },
