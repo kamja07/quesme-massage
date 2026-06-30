@@ -72,6 +72,30 @@
   .wnav-in .back{flex:0 0 auto; padding:0 18px; background:#eef3f1; color:#3c4a4d;}
   .wnav-in .bigbtn{flex:1; margin:0;} .wnav-in .bigbtn:disabled{background:#bcc9c6;}
   .wnav-in>span{flex:1;}
+  /* 프리티 상세 카드 (사진 나열 + 프로필) */
+  .pbig{position:relative; border:1.5px solid #e2e9e7; border-radius:16px; overflow:hidden; background:#fff; margin-bottom:11px; cursor:pointer; transition:.12s;}
+  .pbig.on{border-color:#e6b800; box-shadow:0 0 0 2px #ffe7a0;}
+  .pbig .strip{display:flex; gap:2px; background:#000;}
+  .pbig .shot{flex:1; min-width:0; aspect-ratio:3/4; position:relative; overflow:hidden;}
+  .pbig .shot img{width:100%; height:100%; object-fit:cover; display:block;}
+  .pbig .shot .zoom{position:absolute; bottom:5px; right:5px; background:rgba(0,0,0,.5); color:#fff; font-size:11px; padding:1px 6px; border-radius:10px;}
+  .pbig .shot.ph{display:flex; align-items:center; justify-content:center; background:var(--teal-l); color:var(--teal); font-weight:800; font-size:30px;}
+  .pbig .info{padding:11px 13px 13px;}
+  .pbig .nm{font-size:16px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:7px;}
+  .pbig .prof{font-size:12.5px; color:#a8810a; font-weight:800; margin-top:5px;}
+  .pbig .bio{font-size:12px; color:var(--muted); margin-top:4px; line-height:1.45;}
+  .pbig .extra{font-size:12px; font-weight:800; color:var(--amber); margin-top:5px;}
+  .pbig .ptier{font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;}
+  .pbig .selbtn{margin-top:11px; width:100%; padding:11px; border-radius:11px; font-size:14px; font-weight:800; background:var(--teal-l); color:var(--teal); border:none; cursor:pointer;}
+  .pbig.on .selbtn{background:#e6b800; color:#fff;}
+  .pbig .tick{position:absolute; top:9px; right:9px; z-index:2; width:25px; height:25px; border-radius:50%; background:#e6b800; color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800;}
+  /* 라이트박스 */
+  .lb{position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,.93); display:none; align-items:center; justify-content:center;}
+  .lb.on{display:flex;}
+  .lb img{max-width:100%; max-height:100%; object-fit:contain;}
+  .lb .lbx{position:absolute; top:14px; right:16px; background:rgba(255,255,255,.9); width:36px; height:36px; border-radius:50%; font-size:20px; border:none; line-height:1; cursor:pointer;}
+  .lb .lbnav{position:absolute; bottom:24px; left:50%; transform:translateX(-50%); display:flex; gap:9px;}
+  .lb .lbnav b{width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.4);} .lb .lbnav b.on{background:#fff;}
 </style>
 </head>
 <body>
@@ -85,6 +109,7 @@
   </div>
   <div class="spa-body" id="body"></div>
 </div>
+<div class="lb" id="lb" onclick="closeLb()"><button class="lbx" onclick="closeLb()">✕</button><img alt=""><div class="lbnav" id="lbnav"></div></div>
 
 <script src="i18n.js"></script>
 <script src="config.js"></script>
@@ -169,7 +194,7 @@
     var pretty=now.filter(function(p){return p.tier==='pretty';}), reg=now.filter(function(p){return p.tier!=='pretty';});
     function card(p){ var ini=(p.name||'?').charAt(0).toUpperCase(); var ph=(p.photos&&p.photos.length)?p.photos[0]:p.avatar; var pic=ph?'<img src="'+esc(ph)+'">':esc(ini); var ty=p.tier==='pretty'?'pretty':'regular'; return '<div class="pcard '+ty+'" style="cursor:default"><span class="ptier '+ty+'">'+t('spa.tier.'+ty)+'</span><div class="pic">'+pic+'</div><div class="pnm">'+esc(p.name)+'</div></div>'; }
     var provBlock = now.length
-      ? (pretty.length?'<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div><div class="provgrid">'+pretty.map(card).join('')+'</div>':'')+(reg.length?'<div class="grp-h">'+t('spa.tier.regular')+'</div><div class="provgrid">'+reg.map(card).join('')+'</div>':'')
+      ? (pretty.length?'<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div>'+pretty.map(function(p){return prettyBig(p,false);}).join(''):'')+(reg.length?'<div class="grp-h">'+t('spa.tier.regular')+'</div><div class="provgrid">'+reg.map(card).join('')+'</div>':'')
       : '<div class="meta" style="color:var(--warm);padding:6px 0">'+t('spa.noneNow')+'</div>';
     var slots=walkinSlots();
     var slotBlock = slots.length ? '<div style="display:flex;flex-wrap:wrap;gap:7px">'+slots.map(function(m){ return '<span class="rbadge" style="background:var(--teal-l);color:var(--teal);font-size:13.5px;padding:7px 12px">'+min2hm(m)+'</span>'; }).join('')+'</div>' : '<div class="meta" style="color:var(--warm)">'+t('spa.noSlotNow')+'</div>';
@@ -226,6 +251,38 @@
       (sel.prov===p.id?'<span class="ptick">✓</span>':'')+'<span class="ptier '+ty+'">'+t('spa.tier.'+ty)+'</span>'+
       '<div class="pic">'+pic+'</div><div class="pnm">'+esc(p.name)+'</div><div class="pbio">'+esc(p.bio||'')+'</div>'+extra+'</div>';
   }
+  function profLine(p){   // 나이·키·몸무게·사이즈
+    var a=[];
+    if(p.age) a.push(p.age+(lang==='ko'?'세':lang==='ja'?'歳':lang==='zh'?'岁':'y'));
+    if(p.height) a.push(p.height+'cm'); if(p.weight) a.push(p.weight+'kg'); if(p.stats) a.push(esc(p.stats));
+    return a.join(' · ');
+  }
+  function prettyBig(p,selectable){   // 선택 단계용: 사진 나열 + 누르면 확대 + 아래 프로필
+    var on=sel.prov===p.id, photos=(p.photos&&p.photos.length)?p.photos.slice(0,3):[], strip;
+    if(photos.length){
+      strip=photos.map(function(u,i){ return '<div class="shot" onclick="lightbox(\''+p.id+'\','+i+');event.stopPropagation()"><img src="'+esc(u)+'"><span class="zoom">🔍</span></div>'; }).join('');
+    } else {
+      var ini=(p.name||'?').trim().charAt(0).toUpperCase();
+      strip='<div class="shot '+(p.avatar?'':'ph')+'">'+(p.avatar?'<img src="'+esc(p.avatar)+'">':esc(ini))+'</div>';
+    }
+    var prof=profLine(p);
+    return '<div class="pbig '+(on?'on':'')+'"'+(selectable?' onclick="pickProv(\''+p.id+'\')"':' style="cursor:default"')+'>'+
+      (on?'<span class="tick">✓</span>':'')+
+      '<div class="strip">'+strip+'</div>'+
+      '<div class="info"><div class="nm">'+esc(p.name)+' <span class="ptier pretty">'+t('spa.tier.pretty')+'</span></div>'+
+      (prof?'<div class="prof">'+prof+'</div>':'')+
+      (p.bio?'<div class="bio">'+esc(p.bio)+'</div>':'')+
+      (p.price_extra>0?'<div class="extra">'+tn('spa.extra',p.price_extra)+'</div>':'')+
+      (selectable?'<button class="selbtn">'+(on?'✓ '+t('spa.chosen'):t('spa.choose'))+'</button>':'')+
+      '</div></div>';
+  }
+  window.lightbox=function(pid,i){
+    var p=byId(providers,pid); if(!p||!p.photos||!p.photos[i]) return;
+    var lb=document.getElementById('lb'); lb.querySelector('img').src=p.photos[i];
+    lb.querySelector('#lbnav').innerHTML=p.photos.slice(0,3).map(function(_,j){return '<b class="'+(j===i?'on':'')+'"></b>';}).join('');
+    lb.classList.add('on');
+  };
+  window.closeLb=function(){ document.getElementById('lb').classList.remove('on'); };
   function prettyCtx(){ var svc=byId(services,sel.svc), prov=sel.prov?byId(providers,sel.prov):null; return (prov&&prov.tier==='pretty')||(svc&&svc.tier==='pretty'); }
   function allowedRooms(){ var pc=prettyCtx(); return rooms.filter(function(r){ if(r.active===false) return false; return pc? r.type==='private' : true; }); }   // 프리티=개인룸만, 그외(오일 등)=전체
   function eligibleProviders(){ var svc=byId(services,sel.svc), st=svc?svc.tier:null; return onShiftProviders().filter(function(p){ if(st==='pretty') return p.tier==='pretty'; if(st==='regular') return p.tier!=='pretty'; return true; }); }
@@ -287,7 +344,7 @@
       if(sel.prov && !elig.some(function(p){return p.id===sel.prov;})) sel.prov=null;
       var pretty=elig.filter(function(p){return p.tier==='pretty';}), regular=elig.filter(function(p){return p.tier!=='pretty';});
       var provHtml='<div class="opt '+(sel.prov===null?'on':'')+'" onclick="pickProv(\'any\')"><div class="av">🙂</div><div class="nm">'+t('spa.anyone')+'</div><div class="tick"></div></div>';
-      if(pretty.length) provHtml+='<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div><div class="provgrid">'+pretty.map(provCard).join('')+'</div>';
+      if(pretty.length) provHtml+='<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div>'+pretty.map(function(p){return prettyBig(p,true);}).join('');
       if(regular.length) provHtml+='<div class="grp-h">'+t('spa.tier.regular')+'</div><div class="provgrid">'+regular.map(provCard).join('')+'</div>';
       el.innerHTML=stepWrap(4, t('spa.therapist'), '<div class="opts">'+provHtml+'</div>', { back:true, next:t('common.next') });
       return;
