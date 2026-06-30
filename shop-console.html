@@ -149,15 +149,25 @@
   }
   window.rmEditPhoto=function(i){ editPhotos.splice(i,1); renderEditPhotos(); };
   window.addEditPhoto=function(input){ var f=input.files&&input.files[0]; if(!f) return;
-    var r=new FileReader(); r.onload=function(){ var img=new Image(); img.onload=function(){
-      var max=720, w=img.width, h=img.height;
-      if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
-      var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
-      editPhotos.push(cv.toDataURL('image/jpeg',0.62)); renderEditPhotos();
-    }; img.src=r.result; }; r.readAsDataURL(f); input.value='';
+    var r=new FileReader();
+    r.onerror=function(){ alert('사진을 읽지 못했어요. 다른 사진으로 시도해 주세요.'); input.value=''; };
+    r.onload=function(){ var img=new Image();
+      img.onerror=function(){ alert('이 사진 형식은 지원되지 않아요 (HEIC 등 아이폰 기본형식일 수 있어요).\n사진을 캡처하거나 JPG/PNG로 저장한 뒤 올려주세요.'); input.value=''; };
+      img.onload=function(){
+        var max=720, w=img.width, h=img.height;
+        if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+        var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+        try{ editPhotos.push(cv.toDataURL('image/jpeg',0.62)); }catch(e){ alert('사진 처리 실패: '+e); }
+        renderEditPhotos(); input.value='';
+      }; img.src=r.result; };
+    r.readAsDataURL(f);
   };
   window.saveProv=function(){ if(!editId) return;
-    supa.from('qsm_providers').update({ name:v('e_name'), tier:v('e_tier'), price_extra:parseInt(v('e_extra')||'0',10)||0, bio:v('e_bio')||null, age:vi('e_age'), height:vi('e_height'), weight:vi('e_weight'), stats:v('e_stats')||null, photos:editPhotos, freelance:document.getElementById('e_free').checked, outcall_ok:document.getElementById('e_out').checked, active:document.getElementById('e_active').checked }).eq('id',editId).then(function(){ closeEdit(); load(); });
+    var btn=document.querySelector('#pmodal .bigbtn'); if(btn){ btn.disabled=true; btn.textContent='저장 중…'; }
+    supa.from('qsm_providers').update({ name:v('e_name'), tier:v('e_tier'), price_extra:parseInt(v('e_extra')||'0',10)||0, bio:v('e_bio')||null, age:vi('e_age'), height:vi('e_height'), weight:vi('e_weight'), stats:v('e_stats')||null, photos:editPhotos, freelance:document.getElementById('e_free').checked, outcall_ok:document.getElementById('e_out').checked, active:document.getElementById('e_active').checked }).eq('id',editId).then(function(res){
+      if(res&&res.error){ alert('저장 실패: '+(res.error.message||res.error)+'\n(사진 용량이 너무 크거나 로그인 권한 문제일 수 있어요)'); if(btn){ btn.disabled=false; btn.textContent='저장'; } return; }
+      closeEdit(); load();
+    }).catch(function(e){ alert('저장 실패: '+e); if(btn){ btn.disabled=false; btn.textContent='저장'; } });
   };
   window.closeEdit=function(){ document.getElementById('pmwrap').classList.remove('on'); editId=null; };
 
