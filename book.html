@@ -171,7 +171,7 @@
 
   var store=null, providers=[], rooms=[], services=[], shifts=[], shiftIdx={}, dayBookings=[];
   var sel={ loc:'shop', svc:null, prov:null, room:null, addr:'', mode:'now', slot:null };
-  var step=0, walkinOpen=true;
+  var step=0, walkinOpen=true, grpOpen={pretty:true, regular:true};
   var OUTCALL_FEE = 300;
   function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function onShiftProviders(){
@@ -271,6 +271,12 @@
     return hint+dl+acc;
   }
   window.toggleWalkin=function(){ walkinOpen=!walkinOpen; render(); };
+  function grpAcc(key,label,body,count){   // 프리티/전문 그룹 접기·펼치기
+    var open=grpOpen[key];
+    return '<div class="wk-acc"><div class="wk-acch" onclick="toggleGrp(\''+key+'\')">'+label+' <span class="cnt">('+count+')</span><span class="arr '+(open?'open':'')+'">▾</span></div>'+
+      (open?'<div class="wk-accb">'+body+'</div>':'')+'</div>';
+  }
+  window.toggleGrp=function(k){ grpOpen[k]=!grpOpen[k]; render(); };
   function svcLabel(s){ return esc(s.name)+' · '+tn('spa.min',s.duration_min)+(s.price?' · ฿'+s.price:''); }
 
   window.pick=function(kind,id){ sel[kind]=id; render(); };
@@ -421,10 +427,10 @@
       var provs=onShiftProviders();   // 메뉴 전이라 등급필터 없음 — 전체 노출
       if(sel.prov && !provs.some(function(p){return p.id===sel.prov;})) sel.prov=null;
       var pretty=provs.filter(function(p){return p.tier==='pretty';}), regular=provs.filter(function(p){return p.tier!=='pretty';});
-      var provHtml='<div class="opts" style="margin-bottom:4px"><div class="opt '+(sel.prov===null?'on':'')+'" onclick="pickProv(\'any\')"><div class="av">🙂</div><div class="nm">'+t('spa.anyone')+'</div><div class="tick"></div></div></div>';
-      if(pretty.length) provHtml+='<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div>'+pretty.map(function(p){return prettyBig(p,true);}).join('');
-      if(regular.length) provHtml+='<div class="grp-h">'+t('spa.tier.regular')+'</div><div class="provgrid">'+regular.map(provCard).join('')+'</div>';
-      el.innerHTML=stepWrap(1, t('spa.therapist'), modeTabs+'<div class="sec-h" style="margin-top:8px">💆 '+t('spa.therapist')+'</div>'+provHtml, { next:t('common.next'), total:3 });
+      var provHtml='<div class="opts" style="margin-bottom:11px"><div class="opt '+(sel.prov===null?'on':'')+'" onclick="pickProv(\'any\')"><div class="av">🙂</div><div class="nm">'+t('spa.anyone')+'</div><div class="tick"></div></div></div>';
+      if(pretty.length) provHtml+=grpAcc('pretty','⭐ '+t('spa.prettyMassage'), pretty.map(function(p){return prettyBig(p,true);}).join(''), pretty.length);
+      if(regular.length) provHtml+=grpAcc('regular','💆 '+t('spa.proMassage'), '<div class="provgrid">'+regular.map(provCard).join('')+'</div>', regular.length);
+      el.innerHTML=stepWrap(1, t('spa.therapist'), modeTabs+'<div class="sec-h" style="margin-top:10px">🙋 '+t('spa.therapist')+'</div>'+provHtml, { next:t('common.next'), total:3 });
       return;
     }
     if(step===1){   // 시간 테이블(스케줄) + 메뉴
