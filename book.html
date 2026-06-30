@@ -88,7 +88,7 @@
   function tn(k,n){ return I18N.t(lang,k).replace('{n}',n); }
   var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); };
 
-  var store=null, providers=[], rooms=[], services=[], shifts=[], shiftIdx={};
+  var store=null, providers=[], rooms=[], services=[], shifts=[], shiftIdx={}, dayBookings=[];
   var sel={ loc:'shop', svc:null, prov:null, room:null, addr:'', mode:'now', slot:null };
   var OUTCALL_FEE = 300;
   function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -115,6 +115,28 @@
   function slots(){ var out=[],d=new Date(); d.setSeconds(0,0); var m=d.getMinutes(); d.setMinutes(m+((m<30)?(30-m):(60-m))); for(var i=0;i<8;i++){var x=new Date(d.getTime()+i*30*60000); out.push(String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0'));} return out; }
   function genCno(){ return 100+Math.floor(Math.random()*900); }
   function byId(arr,id){ for(var i=0;i<arr.length;i++) if(arr[i].id===id) return arr[i]; return null; }
+  // ---- 가용성(빈자리) 계산: 룸+마사지사+출근+운영시간 ----
+  function hm2min(s){ var p=(s||'').split(':'); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); }
+  function min2hm(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+  function nowMin(){ var d=new Date(); return d.getHours()*60+d.getMinutes(); }
+  function overlaps(aS,aD,bS,bD){ return aS < bS+bD && bS < aS+aD; }
+  function roomBusy(roomId,t,dur){ if(!roomId) return false; return dayBookings.some(function(b){ return b.room_id===roomId && b.start_time && overlaps(t,dur,hm2min(b.start_time),b.duration_min||60); }); }
+  function provBusy(provId,t,dur){ if(!provId) return false; return dayBookings.some(function(b){ return b.provider_id===provId && b.start_time && overlaps(t,dur,hm2min(b.start_time),b.duration_min||60); }); }
+  function provOnShift(provId,t,dur){ if(!shifts.length) return true; var s=shiftIdx[provId]; if(!s||s.off) return false; return t>=hm2min(s.start_time||'00:00') && (t+dur)<=hm2min(s.end_time||'23:59'); }
+  function availableSlots(){
+    var svc=byId(services,sel.svc); var dur=svc?svc.duration_min:60;
+    var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
+    var nm=nowMin(), act=onShiftProviders(), out=[];
+    for(var ti=open; ti+dur<=close; ti+=30){
+      if(ti < nm) continue;                                   // 지난 시간(오늘) 제외
+      if(sel.loc!=='outcall' && roomBusy(sel.room,ti,dur)) continue;
+      if(sel.prov){ if(provBusy(sel.prov,ti,dur) || !provOnShift(sel.prov,ti,dur)) continue; }
+      else { if(!act.some(function(p){ return provOnShift(p.id,ti,dur) && !provBusy(p.id,ti,dur); })) continue; }
+      out.push(ti);
+    }
+    return out;
+  }
+  window.setSlot=function(v){ sel.slot=v; };
   function svcLabel(s){ return esc(s.name)+' · '+tn('spa.min',s.duration_min)+(s.price?' · ฿'+s.price:''); }
 
   window.pick=function(kind,id){ sel[kind]=id; render(); };
@@ -130,13 +152,14 @@
     if(!sel.svc){ err.textContent=t('spa.needSvc'); return; }
     if(isOut){ if(!(sel.addr||'').trim()){ err.textContent=t('spa.needAddr'); if(ad)ad.focus(); return; } }
     else if(!sel.room){ err.textContent=t('spa.needRoom'); return; }
+    if(sel.mode==='reserve' && !sel.slot){ err.textContent=t('spa.noSlot'); return; }
     if(!nick){ if(n){n.focus();} return; }
     try{ localStorage.setItem('quesme:nick',nick); }catch(e){}
     var svc=byId(services,sel.svc);
     var id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'x'+Math.random().toString(36).slice(2)+Date.now();
     var row={ id:id, store_slug:slug, nick:nick, lang:lang, service_id:sel.svc, provider_id:sel.prov||null,
       room_id:isOut?null:sel.room, location_type:isOut?'outcall':'shop', address:isOut?(sel.addr||'').trim():null, travel_fee:isOut?OUTCALL_FEE:0,
-      mode:sel.mode==='reserve'?'reserve':'walkin', book_date:todayStr(), start_time:sel.mode==='reserve'?(sel.slot||slots()[0]):null,
+      mode:sel.mode==='reserve'?'reserve':'walkin', book_date:todayStr(), start_time:sel.mode==='reserve'?sel.slot:null,
       duration_min:svc?svc.duration_min:60, status:'waiting', cno:genCno() };
     document.getElementById('bookBtn').disabled=true;
     supa.from('qsm_bookings').insert(row).then(function(res){
@@ -193,9 +216,15 @@
     }).join('') || '<div class="meta" style="color:#9aa7a4">—</div>';
 
     var isRes = sel.mode==='reserve';
-    var timeHtml = '<div class="modetabs"><button class="mtab '+(!isRes?'on':'')+'" onclick="setMode(\'now\')">'+t('spa.now')+'</button>'+
-      '<button class="mtab '+(isRes?'on':'')+'" onclick="setMode(\'reserve\')">'+t('spa.reserve')+'</button></div>'+
-      (isRes?'<div class="field"><label>'+t('spa.time')+'</label><select id="slot" onchange="window.__slot=this.value">'+slots().map(function(s){return '<option value="'+s+'"'+(sel.slot===s?' selected':'')+'>'+t('spa.today')+' '+s+'</option>';}).join('')+'</select></div>':'');
+    var avail = isRes ? availableSlots() : [];
+    if(isRes){ if(!sel.slot || avail.indexOf(hm2min(sel.slot))<0){ sel.slot = avail.length?min2hm(avail[0]):null; } }
+    var timeBody = isRes
+      ? (avail.length
+          ? '<div class="field"><label>'+t('spa.timePick')+'</label><select id="slot" onchange="setSlot(this.value)">'+avail.map(function(m){ var hm=min2hm(m); return '<option value="'+hm+'"'+(sel.slot===hm?' selected':'')+'>'+t('spa.today')+' '+hm+'</option>'; }).join('')+'</select></div>'
+          : '<div class="field" style="color:var(--warm);font-size:13px;line-height:1.5">'+t('spa.noSlot')+'</div>')
+      : '<div style="font-size:12.5px;color:var(--muted);line-height:1.55;background:#fbfdfc;border:1px solid #eef3f1;border-radius:11px;padding:11px 13px">'+t('spa.walkinHint')+'</div>';
+    var timeHtml = '<div class="modetabs"><button class="mtab '+(!isRes?'on':'')+'" onclick="setMode(\'now\')">'+t('spa.walkin')+'</button>'+
+      '<button class="mtab '+(isRes?'on':'')+'" onclick="setMode(\'reserve\')">'+t('spa.reserve')+'</button></div>'+timeBody;
 
     var isOut = sel.loc==='outcall';
     var locHtml = '<div class="modetabs"><button class="mtab '+(!isOut?'on':'')+'" onclick="setLoc(\'shop\')">🏠 '+t('spa.locShop')+'</button>'+
@@ -253,17 +282,20 @@
       supa.from('qsm_providers').select('*').eq('store_slug',slug).order('sort'),
       supa.from('qsm_rooms').select('*').eq('store_slug',slug).order('sort'),
       supa.from('qsm_services').select('*').eq('store_slug',slug).order('sort'),
-      supa.from('qsm_shifts').select('*').eq('store_slug',slug).eq('work_date',todayStr())
+      supa.from('qsm_shifts').select('*').eq('store_slug',slug).eq('work_date',todayStr()),
+      supa.from('qsm_bookings').select('provider_id,room_id,start_time,duration_min,status').eq('store_slug',slug).eq('book_date',todayStr()).neq('status','cancelled')
     ]).then(function(res){
       store=res[0].data||{slug:slug,names:{}}; providers=res[1].data||[]; rooms=res[2].data||[]; services=res[3].data||[];
       shifts=res[4].data||[]; shiftIdx={}; shifts.forEach(function(s){ shiftIdx[s.provider_id]=s; });
+      dayBookings=res[5].data||[];
       if(preProvider && providers.some(function(p){return p.id===preProvider;})){ sel.prov=preProvider; }   // 쇼케이스 지명 반영
       loadMine();
     });
   }
+  function loadDayBookings(){ supa.from('qsm_bookings').select('provider_id,room_id,start_time,duration_min,status').eq('store_slug',slug).eq('book_date',todayStr()).neq('status','cancelled').then(function(r){ dayBookings=r.data||[]; render(); }); }
 
   loadAll();
-  supa.channel('quesme-spa-'+slug).on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings',filter:'store_slug=eq.'+slug},function(){ loadMine(); }).subscribe();
+  supa.channel('quesme-spa-'+slug).on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings',filter:'store_slug=eq.'+slug},function(){ loadMine(); loadDayBookings(); }).subscribe();
 })();
 </script>
 <script src="pwa.js"></script>
