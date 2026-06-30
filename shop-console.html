@@ -62,6 +62,28 @@
   .addphoto{width:72px; height:90px; border:1.5px dashed #c7d3cf; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:24px; color:#9aa7a4; cursor:pointer;}
   .pmsave{position:sticky; bottom:0; background:#fff; margin:16px -18px 0; padding:12px 18px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid #eef3f1; box-shadow:0 -5px 14px rgba(0,0,0,.05);}
   .pmsave .bigbtn{margin:0;}
+  /* 스케줄 그리드 */
+  .schtop{display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;}
+  .schtop input[type=date]{padding:8px; border:1.5px solid #d7e2df; border-radius:9px; font-family:inherit; font-size:14px;}
+  .daynav{background:#eef3f1; border:none; border-radius:8px; width:34px; height:34px; font-size:16px; cursor:pointer;}
+  .vtog{display:flex; border:1.5px solid #d7e2df; border-radius:9px; overflow:hidden; margin-left:auto;}
+  .vtog button{padding:8px 12px; border:none; background:#fff; font-size:13px; font-weight:700; color:var(--muted); cursor:pointer;}
+  .vtog button.on{background:var(--teal); color:#fff;}
+  .hrset{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); width:100%;}
+  .hrset input{width:62px; padding:6px; border:1px solid #d7e2df; border-radius:7px; font-family:inherit; font-size:12px;}
+  .gwrap{overflow:auto; max-height:70vh; border:1px solid #eef3f1; border-radius:12px;}
+  .gtable{border-collapse:separate; border-spacing:0;}
+  .gtable td,.gtable th{border-right:1px solid #f0f3f2; border-bottom:1px solid #f0f3f2;}
+  .rowhead{position:sticky; left:0; background:#fbfdfc; z-index:2; min-width:92px; max-width:92px; padding:6px 9px; font-size:12.5px; font-weight:700; text-align:left;}
+  .timehead{font-size:10px; color:var(--muted); font-weight:700; padding:5px 0; min-width:48px; background:#fbfdfc; position:sticky; top:0; z-index:1;}
+  .corner{position:sticky; left:0; top:0; z-index:3; background:#fbfdfc;}
+  .gcell{min-width:48px; height:42px; cursor:pointer; padding:0;}
+  .gcell:hover{background:var(--teal-l);}
+  .gcell.off{background:repeating-linear-gradient(45deg,#f5f5f3,#f5f5f3 5px,#ececea 5px,#ececea 10px); cursor:default;}
+  .gbk{height:40px; border-radius:7px; margin:1px; padding:3px 6px; font-size:10.5px; line-height:1.2; overflow:hidden; cursor:pointer; color:#fff; background:var(--teal);}
+  .gbk.pretty{background:#c79100;} .gbk.serving{background:var(--warm);} .gbk.done{background:#9aa7a4;}
+  .gbk b{font-weight:800;}
+  .slotinfo{font-size:13px; color:var(--muted); margin:-4px 0 12px;}
 </style>
 </head>
 <body>
@@ -75,7 +97,8 @@
 <div class="sc">
   <div class="sc-top"><div><div class="t1" id="shopName">샵 콘솔</div><div class="t2" id="sub"></div></div><button class="logoutbtn" onclick="doLogout()">로그아웃</button></div>
   <div class="tabs">
-    <div class="tab on" data-t="bookings" onclick="setTab('bookings')">🗓 예약</div>
+    <div class="tab on" data-t="schedule" onclick="setTab('schedule')">📅 스케줄</div>
+    <div class="tab" data-t="bookings" onclick="setTab('bookings')">🗓 예약</div>
     <div class="tab" data-t="providers" onclick="setTab('providers')">💆 마사지사</div>
     <div class="tab" data-t="rooms" onclick="setTab('rooms')">🚪 룸</div>
     <div class="tab" data-t="services" onclick="setTab('services')">📋 시술</div>
@@ -83,14 +106,20 @@
   <div class="body" id="body"></div>
 </div>
 <div class="pmwrap" id="pmwrap" onclick="if(event.target===this)closeEdit()"><div class="pmodal" id="pmodal"></div></div>
+<div class="pmwrap" id="smwrap" onclick="if(event.target===this)closeSlot()"><div class="pmodal" id="smodal"></div></div>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var slug = new URLSearchParams(location.search).get('store') || '';
-  var tab='bookings', providers=[], rooms=[], services=[], bookings=[], shop=null;
+  var tab='schedule', providers=[], rooms=[], services=[], bookings=[], shop=null;
+  var schedView='room', schedDate, schedBookings=[], schedShifts={};
   function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  schedDate=today();
+  function hm2min(s){ var p=(s||'').split(':'); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); }
+  function min2hm(m){ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+  function schSlots(){ var o=hm2min((shop&&shop.open_time)||'10:00'), c=hm2min((shop&&shop.close_time)||'22:00'); if(c<=o)c=o+12*60; var a=[]; for(var t=o;t<c;t+=30)a.push(t); return a; }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
   function byId(a,id){ for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
 
@@ -100,7 +129,7 @@
   window.doSignup=function(){ var pw=document.getElementById('liPw').value||''; document.getElementById('liErr').textContent=''; if(pw.length<6){ document.getElementById('liErr').textContent='비밀번호 6자 이상'; return; }
     supa.auth.signUp({email:emailOf(),password:pw}).then(function(r){ if(r&&r.error) document.getElementById('liErr').textContent='설정 실패 — '+(r.error.message||''); }); };
   window.doLogout=function(){ supa.auth.signOut(); };
-  window.setTab=function(t){ tab=t; Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(e){ e.classList.toggle('on', e.getAttribute('data-t')===t); }); render(); };
+  window.setTab=function(t){ tab=t; Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(e){ e.classList.toggle('on', e.getAttribute('data-t')===t); }); if(t==='schedule') loadSched(); else render(); };
 
   function load(){
     Promise.all([
@@ -111,8 +140,88 @@
       supa.from('qsm_bookings').select('*').eq('store_slug',slug).eq('book_date',today()).neq('status','cancelled').neq('status','done')
     ]).then(function(r){ shop=r[0].data; providers=r[1].data||[]; rooms=r[2].data||[]; services=r[3].data||[]; bookings=r[4].data||[];
       document.getElementById('shopName').textContent=(shop&&((shop.names||{}).ko||(shop.names||{}).en))||slug;
-      document.getElementById('sub').textContent='QuesMe Massage · '+slug; render(); });
+      document.getElementById('sub').textContent='QuesMe Massage · '+slug; if(tab==='schedule') loadSched(); else render(); });
   }
+
+  // ---- 스케줄 그리드 ----
+  function loadSched(){
+    Promise.all([
+      supa.from('qsm_bookings').select('*').eq('store_slug',slug).eq('book_date',schedDate).neq('status','cancelled'),
+      supa.from('qsm_shifts').select('*').eq('store_slug',slug).eq('work_date',schedDate)
+    ]).then(function(r){ schedBookings=r[0].data||[]; schedShifts={}; (r[1].data||[]).forEach(function(s){ schedShifts[s.provider_id]=s; }); renderSched(); });
+  }
+  window.setSchedView=function(v){ schedView=v; renderSched(); };
+  window.changeDate=function(d){ var dt=new Date(schedDate+'T00:00:00'); dt.setDate(dt.getDate()+d); schedDate=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); loadSched(); };
+  window.setDate=function(v){ if(v){ schedDate=v; loadSched(); } };
+  window.setHours=function(){ var o=v('h_open'), c=v('h_close'); supa.from('qsm_shops').update({open_time:o,close_time:c}).eq('slug',slug).then(function(){ if(shop){shop.open_time=o;shop.close_time=c;} renderSched(); }); };
+  function slotIdx(slots,t){ var best=-1; for(var i=0;i<slots.length;i++){ if(slots[i]<=t) best=i; } return best; }
+  function offShiftAt(prov,t){ var s=schedShifts[prov.id]; if(!schedShiftsAny()) return false; if(!s||s.off) return true; return t<hm2min(s.start_time||'00:00') || t>=hm2min(s.end_time||'23:59'); }
+  function schedShiftsAny(){ for(var k in schedShifts) return true; return false; }
+
+  function renderSched(){
+    var slots=schSlots();
+    var rowsArr = schedView==='provider' ? providers.filter(function(p){return p.active!==false;}) : rooms.filter(function(r){return r.active!==false;});
+    var head='<tr><th class="rowhead corner">'+(schedView==='provider'?'마사지사':'룸')+'</th>'+slots.map(function(t){ return '<th class="timehead">'+(t%60===0?min2hm(t):'·')+'</th>'; }).join('')+'</tr>';
+    var bodyRows=rowsArr.map(function(row){
+      var rowBk=schedBookings.filter(function(b){ return b.start_time && (schedView==='provider'? b.provider_id===row.id : b.room_id===row.id); });
+      var occ={};
+      rowBk.forEach(function(b){ var si=slotIdx(slots,hm2min(b.start_time)); if(si<0)si=0; var span=Math.max(1,Math.ceil((b.duration_min||60)/30)); if(si+span>slots.length)span=slots.length-si; b.__si=si; b.__span=span; occ[si]=b; for(var k=1;k<span;k++)occ[si+k]='x'; });
+      var cells=''; var i=0;
+      while(i<slots.length){
+        if(occ[i] && occ[i]!=='x'){ var b=occ[i]; var ty=(byId(providers,b.provider_id)||{}).tier==='pretty'?'pretty':''; var st=b.status==='serving'?'serving':(b.status==='done'?'done':''); var sub=schedView==='provider'?((byId(rooms,b.room_id)||{}).name||(b.location_type==='outcall'?'출장':'')):((byId(providers,b.provider_id)||{}).name||'아무나'); cells+='<td colspan="'+b.__span+'"><div class="gbk '+ty+' '+st+'" onclick="openBk(\''+b.id+'\')"><b>'+esc(b.nick)+'</b><br>'+esc(sub)+'</div></td>'; i+=b.__span; }
+        else { var t=slots[i]; var off=(schedView==='provider' && offShiftAt(row,t)); cells+='<td class="gcell'+(off?' off':'')+'"'+(off?'':' onclick="openSlot(\''+row.id+'\','+t+')"')+'></td>'; i++; }
+      }
+      return '<tr><th class="rowhead">'+esc(row.name)+(schedView==='provider'&&row.tier==='pretty'?' <span class="tag pretty">프리티</span>':'')+'</th>'+cells+'</tr>';
+    }).join('');
+    document.getElementById('body').innerHTML=
+      '<div class="schtop"><button class="daynav" onclick="changeDate(-1)">‹</button>'+
+        '<input type="date" value="'+schedDate+'" onchange="setDate(this.value)">'+
+        '<button class="daynav" onclick="changeDate(1)">›</button>'+
+        '<div class="vtog"><button class="'+(schedView==='room'?'on':'')+'" onclick="setSchedView(\'room\')">룸</button><button class="'+(schedView==='provider'?'on':'')+'" onclick="setSchedView(\'provider\')">마사지사</button></div>'+
+        '<div class="hrset">운영 <input id="h_open" value="'+((shop&&shop.open_time)||'10:00')+'">~<input id="h_close" value="'+((shop&&shop.close_time)||'22:00')+'"><button class="ibtn" onclick="setHours()">적용</button></div></div>'+
+      '<div class="slotinfo">빈 칸 클릭 = 예약 추가 · 칸 클릭 = 시작/완료. 손님 예약은 자동 표시됩니다.</div>'+
+      (rowsArr.length? '<div class="gwrap"><table class="gtable"><thead>'+head+'</thead><tbody>'+bodyRows+'</tbody></table></div>' : '<div class="empty">'+(schedView==='provider'?'마사지사':'룸')+'를 먼저 등록하세요</div>');
+  }
+
+  window.openSlot=function(rowId,t){
+    var inProv=schedView==='provider';
+    var svcOpt=services.filter(function(s){return s.active!==false;}).map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+' · '+s.duration_min+'분'+(s.price?' · ฿'+s.price:'')+'</option>'; }).join('');
+    var partnerOpts = inProv
+      ? rooms.filter(function(r){return r.active!==false;}).map(function(r){ return '<option value="'+r.id+'">'+esc(r.name)+'</option>'; }).join('')
+      : providers.filter(function(p){return p.active!==false && !offShiftAt(p,t);}).map(function(p){ return '<option value="'+p.id+'">'+esc(p.name)+(p.tier==='pretty'?' (프리티)':'')+'</option>'; }).join('');
+    document.getElementById('smodal').innerHTML=
+      '<div class="pmh"><div class="t">예약 추가 — '+min2hm(t)+'</div><button class="x" onclick="closeSlot()">✕</button></div>'+
+      '<div class="slotinfo">'+(inProv?esc(byId(providers,rowId).name):esc(byId(rooms,rowId).name))+' · '+schedDate+'</div>'+
+      '<label>시술</label><select id="o_svc">'+(svcOpt||'<option value="">— 시술을 먼저 등록하세요 —</option>')+'</select>'+
+      '<label>'+(inProv?'룸':'마사지사')+'</label><select id="o_partner">'+(partnerOpts||'<option value="">— 없음 —</option>')+'</select>'+
+      '<label>손님 닉네임</label><input id="o_nick" placeholder="현장" value="현장">'+
+      '<div class="pmsave"><button class="bigbtn" onclick="addSlotBk(\''+rowId+'\','+t+')">예약 넣기</button></div>';
+    document.getElementById('smwrap').classList.add('on');
+  };
+  window.addSlotBk=function(rowId,t){
+    var inProv=schedView==='provider';
+    var svcId=v('o_svc'), partner=v('o_partner'); if(!svcId){ alert('시술을 선택하세요'); return; }
+    var svc=byId(services,svcId);
+    var row={ store_slug:slug, nick:v('o_nick')||'현장', lang:'ko', service_id:svcId,
+      provider_id: inProv?rowId:(partner||null), room_id: inProv?(partner||null):rowId,
+      mode:'reserve', location_type:'shop', book_date:schedDate, start_time:min2hm(t),
+      duration_min: svc?svc.duration_min:60, status:'waiting', cno:100+Math.floor(Math.random()*900) };
+    var btn=document.querySelector('#smodal .bigbtn'); if(btn){btn.disabled=true;btn.textContent='추가 중…';}
+    supa.from('qsm_bookings').insert(row).then(function(res){ if(res&&res.error){ alert('추가 실패: '+(res.error.message||res.error)); if(btn){btn.disabled=false;btn.textContent='예약 넣기';} return; } closeSlot(); loadSched(); });
+  };
+  window.openBk=function(id){
+    var b=byId(schedBookings,id); if(!b) return;
+    var svc=byId(services,b.service_id), prov=byId(providers,b.provider_id), room=byId(rooms,b.room_id);
+    document.getElementById('smodal').innerHTML=
+      '<div class="pmh"><div class="t">'+esc(b.nick)+' · '+(b.start_time||'')+'</div><button class="x" onclick="closeSlot()">✕</button></div>'+
+      '<div class="slotinfo">'+(svc?esc(svc.name)+' '+svc.duration_min+'분 · ':'')+(prov?esc(prov.name):'아무나')+' · '+(b.location_type==='outcall'?'🚗 출장 '+esc(b.address||''):(room?esc(room.name):'-'))+'</div>'+
+      '<div style="display:flex;gap:8px;margin-top:6px">'+
+        (b.status==='serving'?'<button class="bigbtn" onclick="schAdvance(\''+b.id+'\',\'done\')">완료</button>':'<button class="bigbtn" onclick="schAdvance(\''+b.id+'\',\'serving\')">시작</button>')+
+        '<button class="btn gray" style="flex:0 0 auto;padding:0 16px" onclick="schAdvance(\''+b.id+'\',\'cancelled\')">취소</button></div>';
+    document.getElementById('smwrap').classList.add('on');
+  };
+  window.schAdvance=function(id,to){ supa.from('qsm_bookings').update({status:to}).eq('id',id).then(function(){ closeSlot(); loadSched(); }); };
+  window.closeSlot=function(){ document.getElementById('smwrap').classList.remove('on'); };
 
   // ---- CRUD ----
   function vi(id){ var n=parseInt(v(id)||'',10); return isNaN(n)?null:n; }
@@ -175,6 +284,7 @@
 
   function render(){
     var b=document.getElementById('body');
+    if(tab==='schedule'){ renderSched(); return; }
     if(tab==='providers'){
       b.innerHTML='<div class="addbox"><div class="ttl">＋ 마사지사 추가 (풀 등록)</div>'+
         '<input id="p_name" placeholder="이름"><div class="two"><input id="p_login" placeholder="로그인 아이디 (예: ploy)" autocapitalize="off"><select id="p_tier"><option value="regular">전문</option><option value="pretty">프리티</option></select></div>'+

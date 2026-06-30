@@ -10,6 +10,8 @@ create table if not exists qsm_shops (
   hours      text,
   logo       text,
   tagline    text,
+  open_time  text default '10:00',
+  close_time text default '22:00',
   status     text not null default 'active', -- active | pending
   created_at timestamptz default now()
 );
