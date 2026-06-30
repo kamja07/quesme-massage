@@ -96,6 +96,10 @@
   .lb .lbx{position:absolute; top:14px; right:16px; background:rgba(255,255,255,.9); width:36px; height:36px; border-radius:50%; font-size:20px; border:none; line-height:1; cursor:pointer;}
   .lb .lbnav{position:absolute; bottom:24px; left:50%; transform:translateX(-50%); display:flex; gap:9px;}
   .lb .lbnav b{width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.4);} .lb .lbnav b.on{background:#fff;}
+  /* 시간 테이블 */
+  .ttable{display:grid; grid-template-columns:repeat(4,1fr); gap:7px;}
+  .tcell{padding:12px 0; border:1.5px solid #e2e9e7; border-radius:11px; background:#fff; font-size:14.5px; font-weight:700; color:var(--ink); cursor:pointer; font-family:inherit;}
+  .tcell.on{border-color:var(--teal); background:var(--teal); color:#fff;}
 </style>
 </head>
 <body>
@@ -175,6 +179,17 @@
     return out;
   }
   window.setSlot=function(v){ sel.slot=v; };
+  window.pickSlot=function(hm){ sel.slot=hm; render(); };
+  function scheduleSlots(){   // 선택 마사지사(또는 아무나)의 30분 단위 가능 시작시각
+    var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
+    var nm=nowMin(), out=[];
+    var provs = sel.prov ? [byId(providers,sel.prov)].filter(Boolean) : onShiftProviders();
+    if(!provs.length) return out;
+    for(var ti=Math.max(open, Math.ceil(nm/30)*30); ti+30<=close; ti+=30){
+      if(provs.some(function(p){ return provOnShift(p.id,ti,30) && !provBusy(p.id,ti,30); })) out.push(ti);
+    }
+    return out;
+  }
   function nowSlotStart(){ var open=hm2min((store&&store.open_time)||'10:00'); return Math.max(open, Math.floor(nowMin()/30)*30); }
   function anyRoomFree(t,dur){ return rooms.filter(function(r){return r.active!==false;}).some(function(r){ return !roomBusy(r.id,t,dur); }); }
   function availNowProviders(){ var t=nowSlotStart(); return onShiftProviders().filter(function(p){ return provOnShift(p.id,t,30) && !provBusy(p.id,t,30); }); }
@@ -219,6 +234,13 @@
     else if(!sel.room){ err.textContent=t('spa.needRoom'); return; }
     if(sel.mode==='reserve' && !sel.slot){ err.textContent=t('spa.noSlot'); return; }
     var svc=byId(services,sel.svc);
+    if(sel.mode==='reserve'){   // 고른 시각이 메뉴 소요시간만큼 실제로 비는지 최종 확인
+      var dur=svc?svc.duration_min:60, st=hm2min(sel.slot);
+      var cands=sel.prov?[byId(providers,sel.prov)].filter(Boolean):onShiftProviders();
+      var provFit=cands.some(function(p){ return provOnShift(p.id,st,dur) && !provBusy(p.id,st,dur); });
+      var roomFit=isOut || (sel.room && !roomBusy(sel.room,st,dur));
+      if(!provFit || !roomFit){ err.textContent=t('spa.noSlot'); return; }
+    }
     var id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'x'+Math.random().toString(36).slice(2)+Date.now();
     var row={ id:id, store_slug:slug, nick:nick, lang:lang, service_id:sel.svc, provider_id:sel.prov||null,
       room_id:isOut?null:sel.room, location_type:isOut?'outcall':'shop', address:isOut?(sel.addr||'').trim():null, travel_fee:isOut?OUTCALL_FEE:0,
@@ -289,9 +311,10 @@
   function bookSummary(){
     var svc=byId(services,sel.svc), prov=sel.prov?byId(providers,sel.prov):null, room=byId(rooms,sel.room), isOut=sel.loc==='outcall';
     return '<div class="wsum">'+
-      '<div class="r"><span class="k">'+t('spa.lblWhere')+'</span><span class="v">'+(isOut?'🚗 '+t('spa.locOutcall'):'🏠 '+t('spa.locShop'))+'</span></div>'+
-      '<div class="r"><span class="k">'+t('spa.lblSvc')+'</span><span class="v">'+(svc?esc(svc.name)+' · '+tn('spa.min',svc.duration_min)+(svc.price?' ฿'+svc.price:''):'-')+'</span></div>'+
       '<div class="r"><span class="k">'+t('spa.lblWho')+'</span><span class="v">'+(prov?esc(prov.name)+(prov.tier==='pretty'?' ⭐':''):t('spa.anyone'))+'</span></div>'+
+      '<div class="r"><span class="k">'+t('spa.lblWhen')+'</span><span class="v">'+(sel.slot?t('spa.today')+' '+sel.slot:'-')+'</span></div>'+
+      '<div class="r"><span class="k">'+t('spa.lblSvc')+'</span><span class="v">'+(svc?esc(svc.name)+' · '+tn('spa.min',svc.duration_min)+(svc.price?' ฿'+svc.price:''):'-')+'</span></div>'+
+      '<div class="r"><span class="k">'+t('spa.lblWhere')+'</span><span class="v">'+(isOut?'🚗 '+t('spa.locOutcall'):'🏠 '+t('spa.locShop'))+'</span></div>'+
       (isOut?'':'<div class="r"><span class="k">'+t('spa.lblRoom')+'</span><span class="v">'+(room?esc(room.name):'-')+'</span></div>')+
       '</div>';
   }
@@ -300,16 +323,15 @@
       ? '<button class="bigbtn" id="bookBtn" '+(o.ok===false?'disabled':'')+' onclick="book()">'+t('spa.book')+'</button>'
       : (o.next ? '<button class="bigbtn" '+(o.ok===false?'disabled':'')+' onclick="wStep(1)">'+o.next+'</button>' : '<span></span>');
     var backBtn = o.back ? '<button class="btn back" onclick="wStep(-1)">‹ '+t('common.back')+'</button>' : '';
-    return '<div class="wstep"><div class="wprog">'+num+' / 6</div><div class="wtitle">'+title+'</div>'+content+'</div>'+
-      '<div class="wnav"><div class="wnav-in">'+backBtn+navBtn+'</div></div>';
+    var prog = o.total ? '<div class="wprog">'+num+' / '+o.total+'</div>' : '';
+    var nav = (o.book||o.next||o.back) ? '<div class="wnav"><div class="wnav-in">'+backBtn+navBtn+'</div></div>' : '';
+    return '<div class="wstep"'+(nav?'':' style="padding-bottom:20px"')+'>'+prog+'<div class="wtitle">'+title+'</div>'+content+'</div>'+nav;
   }
   window.wStep=function(d){
     if(d>0){
-      if(step===2 && !sel.svc) return;
-      if(step===4){ if(sel.loc==='outcall'){ var a=document.getElementById('addr'); if(a)sel.addr=a.value; if(!(sel.addr||'').trim()){ alert(t('spa.needAddr')); return; } } else if(!sel.room) return; }
-      if(step===5 && !sel.slot) return;
+      if(step===1 && !(sel.slot && sel.svc)) return;   // 시간+메뉴 둘 다
     }
-    step+=d; if(step<0)step=0; if(step>5)step=5; render();
+    step+=d; if(step<0)step=0; if(step>2)step=2; render();
   };
 
   function render(){
@@ -317,59 +339,55 @@
     var el=document.getElementById('body');
     if(myBooking && (myBooking.status==='waiting'||myBooking.status==='serving')){ el.innerHTML=ticket(myBooking); return; }
     var isRes=sel.mode==='reserve';
+    var modeTabs='<div class="modetabs"><button class="mtab '+(!isRes?'on':'')+'" onclick="setMode(\'now\')">'+t('spa.walkin')+'</button>'+
+      '<button class="mtab '+(isRes?'on':'')+'" onclick="setMode(\'reserve\')">'+t('spa.reserve')+'</button></div>';
 
-    if(step===0){   // 언제 받으실래요? (워크인이면 가용성만, 끝)
-      var modeTabs='<div class="modetabs"><button class="mtab '+(!isRes?'on':'')+'" onclick="setMode(\'now\')">'+t('spa.walkin')+'</button>'+
-        '<button class="mtab '+(isRes?'on':'')+'" onclick="setMode(\'reserve\')">'+t('spa.reserve')+'</button></div>';
-      el.innerHTML=stepWrap(1, t('spa.when'), modeTabs+(isRes?'':walkinPanel()), { next: isRes?t('common.next'):null });
+    if(step===0){   // 언제 + (예약이면) 마사지사 바로 아래
+      if(!isRes){ el.innerHTML=stepWrap(1, t('spa.when'), modeTabs+walkinPanel(), {}); return; }
+      var provs=onShiftProviders();   // 메뉴 전이라 등급필터 없음 — 전체 노출
+      if(sel.prov && !provs.some(function(p){return p.id===sel.prov;})) sel.prov=null;
+      var pretty=provs.filter(function(p){return p.tier==='pretty';}), regular=provs.filter(function(p){return p.tier!=='pretty';});
+      var provHtml='<div class="opts" style="margin-bottom:4px"><div class="opt '+(sel.prov===null?'on':'')+'" onclick="pickProv(\'any\')"><div class="av">🙂</div><div class="nm">'+t('spa.anyone')+'</div><div class="tick"></div></div></div>';
+      if(pretty.length) provHtml+='<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div>'+pretty.map(function(p){return prettyBig(p,true);}).join('');
+      if(regular.length) provHtml+='<div class="grp-h">'+t('spa.tier.regular')+'</div><div class="provgrid">'+regular.map(provCard).join('')+'</div>';
+      el.innerHTML=stepWrap(1, t('spa.therapist'), modeTabs+'<div class="sec-h" style="margin-top:8px">💆 '+t('spa.therapist')+'</div>'+provHtml, { next:t('common.next'), total:3 });
       return;
     }
-    if(step===1){   // 장소
-      var isOut=sel.loc==='outcall';
-      var c='<div class="modetabs"><button class="mtab '+(!isOut?'on':'')+'" onclick="setLoc(\'shop\')">🏠 '+t('spa.locShop')+'</button>'+
-        '<button class="mtab '+(isOut?'on':'')+'" onclick="setLoc(\'outcall\')">🚗 '+t('spa.locOutcall')+'</button></div>';
-      el.innerHTML=stepWrap(2, t('spa.where'), c, { back:true, next:t('common.next') });
-      return;
-    }
-    if(step===2){   // 시술
-      var svcOpts=services.filter(function(s){return s.active!==false;}).map(function(s){
+    if(step===1){   // 시간 테이블(스케줄) + 메뉴
+      var sslots=scheduleSlots();
+      if(sel.slot && sslots.indexOf(hm2min(sel.slot))<0) sel.slot=null;
+      var prov=sel.prov?byId(providers,sel.prov):null;
+      var who = '<div style="font-size:12.5px;color:var(--muted);margin-bottom:9px">'+(prov?'⭐ '+esc(prov.name):t('spa.anyone'))+' · '+t('spa.today')+'</div>';
+      var tt = sslots.length
+        ? '<div class="ttable">'+sslots.map(function(m){ var hm=min2hm(m); return '<button class="tcell '+(sel.slot===hm?'on':'')+'" onclick="pickSlot(\''+hm+'\')">'+hm+'</button>'; }).join('')+'</div>'
+        : '<div class="meta" style="color:var(--warm);padding:6px 0">'+t('spa.noSlotNow')+'</div>';
+      var ptier = prov ? prov.tier : null;
+      var menu = services.filter(function(s){ return s.active!==false && (!ptier || s.tier===ptier || s.tier==='all'); }).map(function(s){
         var badge=s.tier==='pretty'?' <span class="rbadge" style="background:#fff3cd;color:#9a6a00">'+t('spa.tier.pretty')+'</span>':'';
         return '<div class="opt '+(sel.svc===s.id?'on':'')+'" onclick="pick(\'svc\',\''+s.id+'\')"><div><div class="nm">'+esc(s.name)+badge+'</div><div class="meta">'+tn('spa.min',s.duration_min)+(s.price?' · <b style="color:var(--teal)">฿'+s.price+'</b>':'')+'</div></div><div class="tick"></div></div>';
       }).join('')||'<div class="meta" style="color:#9aa7a4">—</div>';
-      el.innerHTML=stepWrap(3, t('spa.svc'), '<div class="opts">'+svcOpts+'</div>', { back:true, next:t('common.next'), ok:!!sel.svc });
+      var body='<div class="sec-h">⏰ '+t('spa.timePick')+'</div>'+who+tt+
+        '<div class="sec-h" style="margin-top:20px">💆 '+t('spa.svc')+'</div><div class="opts">'+menu+'</div>';
+      el.innerHTML=stepWrap(2, t('spa.timeMenu'), body, { back:true, next:t('common.next'), ok:!!(sel.slot&&sel.svc), total:3 });
       return;
     }
-    if(step===3){   // 마사지사
-      var elig=eligibleProviders();
-      if(sel.prov && !elig.some(function(p){return p.id===sel.prov;})) sel.prov=null;
-      var pretty=elig.filter(function(p){return p.tier==='pretty';}), regular=elig.filter(function(p){return p.tier!=='pretty';});
-      var provHtml='<div class="opt '+(sel.prov===null?'on':'')+'" onclick="pickProv(\'any\')"><div class="av">🙂</div><div class="nm">'+t('spa.anyone')+'</div><div class="tick"></div></div>';
-      if(pretty.length) provHtml+='<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div>'+pretty.map(function(p){return prettyBig(p,true);}).join('');
-      if(regular.length) provHtml+='<div class="grp-h">'+t('spa.tier.regular')+'</div><div class="provgrid">'+regular.map(provCard).join('')+'</div>';
-      el.innerHTML=stepWrap(4, t('spa.therapist'), '<div class="opts">'+provHtml+'</div>', { back:true, next:t('common.next') });
-      return;
-    }
-    if(step===4){   // 룸 (프리티=개인룸만) 또는 출장 주소
-      if(sel.loc==='outcall'){
-        var c='<div class="field"><label>'+t('spa.address')+'</label><input id="addr" value="'+esc(sel.addr||'')+'" placeholder="'+t('spa.addressPh')+'" oninput="setAddr(this.value)"></div>'+
-          '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">🚗 '+t('spa.travelFee')+': <b>฿'+OUTCALL_FEE+'</b></div>';
-        el.innerHTML=stepWrap(5, t('spa.address'), c, { back:true, next:t('common.next') });
-        return;
-      }
+    // step 2: 장소/룸 + 요약 + 예약
+    var isOut=sel.loc==='outcall';
+    var locTabs='<div class="modetabs"><button class="mtab '+(!isOut?'on':'')+'" onclick="setLoc(\'shop\')">🏠 '+t('spa.locShop')+'</button>'+
+      '<button class="mtab '+(isOut?'on':'')+'" onclick="setLoc(\'outcall\')">🚗 '+t('spa.locOutcall')+'</button></div>';
+    var placeBody, ok;
+    if(isOut){
+      placeBody='<div class="field"><label>'+t('spa.address')+'</label><input id="addr" value="'+esc(sel.addr||'')+'" placeholder="'+t('spa.addressPh')+'" oninput="setAddr(this.value)"></div>'+
+        '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">🚗 '+t('spa.travelFee')+': <b>฿'+OUTCALL_FEE+'</b></div>';
+      ok=true;
+    } else {
       var rms=allowedRooms();
       if(sel.room && !rms.some(function(r){return r.id===sel.room;})) sel.room=null;
-      var note=prettyCtx()?'<div style="font-size:12.5px;color:var(--teal);font-weight:700;margin-bottom:9px">⭐ '+t('spa.privateOnly')+'</div>':'';
-      var roomHtml=rms.map(function(r){ var ty=r.type||'private'; return '<div class="opt '+(sel.room===r.id?'on':'')+'" onclick="pick(\'room\',\''+r.id+'\')"><div><div class="nm">'+esc(r.name)+'</div><div class="meta"><span class="rbadge '+ty+'">'+t('spa.room.'+ty)+'</span> '+tn('spa.cap',r.capacity||1)+'</div></div><div class="tick"></div></div>'; }).join('')||'<div class="meta" style="color:#9aa7a4">—</div>';
-      el.innerHTML=stepWrap(5, t('spa.room'), note+'<div class="opts">'+roomHtml+'</div>', { back:true, next:t('common.next'), ok:!!sel.room });
-      return;
+      var note=prettyCtx()?'<div style="font-size:12.5px;color:var(--teal);font-weight:700;margin:2px 0 9px">⭐ '+t('spa.privateOnly')+'</div>':'';
+      placeBody=note+'<div class="opts">'+rms.map(function(r){ var ty=r.type||'private'; return '<div class="opt '+(sel.room===r.id?'on':'')+'" onclick="pick(\'room\',\''+r.id+'\')"><div><div class="nm">'+esc(r.name)+'</div><div class="meta"><span class="rbadge '+ty+'">'+t('spa.room.'+ty)+'</span> '+tn('spa.cap',r.capacity||1)+'</div></div><div class="tick"></div></div>'; }).join('')+'</div>';
+      ok=!!sel.room;
     }
-    // step 5: 시간 + 요약 + 예약
-    var avail=availableSlots();
-    if(!sel.slot || avail.indexOf(hm2min(sel.slot))<0){ sel.slot=avail.length?min2hm(avail[0]):null; }
-    var timeBody=avail.length
-      ? '<div class="field"><label>'+t('spa.timePick')+'</label><select id="slot" onchange="setSlot(this.value)">'+avail.map(function(m){ var hm=min2hm(m); return '<option value="'+hm+'"'+(sel.slot===hm?' selected':'')+'>'+t('spa.today')+' '+hm+'</option>'; }).join('')+'</select></div>'
-      : '<div class="field" style="color:var(--warm);font-size:13px;line-height:1.5">'+t('spa.noSlot')+'</div>';
-    el.innerHTML=stepWrap(6, t('spa.timePick'), timeBody+bookSummary()+'<div class="err" id="err"></div>', { back:true, book:true, ok:!!sel.slot });
+    el.innerHTML=stepWrap(3, t('spa.where'), locTabs+placeBody+bookSummary()+'<div class="err" id="err"></div>', { back:true, book:true, ok:ok, total:3 });
   }
 
   function ticket(b){
