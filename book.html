@@ -120,6 +120,26 @@
   .slippic{position:relative; border-radius:13px; overflow:hidden; border:1px solid #eef3f1;}
   .slippic img{width:100%; display:block; max-height:360px; object-fit:contain; background:#000;}
   .slipx{position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,.6); color:#fff; border:none; font-size:15px; cursor:pointer;}
+  /* 워크인 패널 */
+  .wk-hint{display:flex; gap:11px; align-items:flex-start; background:var(--teal-l); border:1px solid var(--teal-line); border-radius:15px; padding:15px 16px; font-size:14px; line-height:1.6; color:#15433a; font-weight:600;}
+  .wk-hint .ic{font-size:21px; line-height:1.3;}
+  .wk-dl{background:#fff8e6; border:1px solid #ffe7a0; border-radius:14px; padding:13px 16px; margin-top:11px;}
+  .wk-dl.closed{background:#fdecea; border-color:#f6c9c2;}
+  .wk-dl .big{font-size:15.5px; font-weight:800; color:#9a6a00;}
+  .wk-dl.closed .big{color:var(--warm);}
+  .wk-dl .sub{font-size:12.5px; color:#a8810a; margin-top:3px;}
+  .wk-dl .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
+  .wk-dl .chips span{background:#fff; border:1px solid #ffe2a0; color:#9a6a00; font-size:12.5px; font-weight:700; padding:5px 11px; border-radius:20px;}
+  .wk-acc{margin-top:13px; border:1px solid #eef3f1; border-radius:15px; overflow:hidden;}
+  .wk-acch{display:flex; align-items:center; gap:7px; padding:14px 15px; cursor:pointer; background:#fbfdfc; font-size:14.5px; font-weight:800; color:var(--ink);}
+  .wk-acch .cnt{color:var(--teal); font-weight:800;} .wk-acch .arr{margin-left:auto; color:var(--muted); transition:.15s;}
+  .wk-acch .arr.open{transform:rotate(180deg);}
+  .wk-accb{padding:4px 13px 13px;}
+  /* 모바일 전용 프레임 */
+  .cust{max-width:430px !important; box-shadow:0 0 40px rgba(0,0,0,.05);}
+  .spa-body{max-width:100% !important;}
+  .wnav{background:transparent;}
+  .wnav-in{max-width:430px; background:#fff; border-top:1px solid #eef3f1; box-shadow:0 -2px 12px rgba(0,0,0,.04);}
 </style>
 </head>
 <body>
@@ -151,7 +171,7 @@
 
   var store=null, providers=[], rooms=[], services=[], shifts=[], shiftIdx={}, dayBookings=[];
   var sel={ loc:'shop', svc:null, prov:null, room:null, addr:'', mode:'now', slot:null };
-  var step=0;
+  var step=0, walkinOpen=true;
   var OUTCALL_FEE = 300;
   function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function onShiftProviders(){
@@ -228,15 +248,29 @@
     var now=availNowProviders();
     var pretty=now.filter(function(p){return p.tier==='pretty';}), reg=now.filter(function(p){return p.tier!=='pretty';});
     function card(p){ var ini=(p.name||'?').charAt(0).toUpperCase(); var ph=(p.photos&&p.photos.length)?p.photos[0]:p.avatar; var pic=ph?'<img src="'+esc(ph)+'">':esc(ini); var ty=p.tier==='pretty'?'pretty':'regular'; return '<div class="pcard '+ty+'" style="cursor:default"><span class="ptier '+ty+'">'+t('spa.tier.'+ty)+'</span><div class="pic">'+pic+'</div><div class="pnm">'+esc(p.name)+'</div></div>'; }
-    var provBlock = now.length
+    // ① 안내 메시지 (상단 강조)
+    var hint='<div class="wk-hint"><span class="ic">🚶</span><span>'+t('spa.walkinHint')+'</span></div>';
+    // ② 워크인 마감 시간
+    var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
+    var durs=services.filter(function(s){return s.active!==false&&s.duration_min;}).map(function(s){return s.duration_min;});
+    var minDur=durs.length?Math.min.apply(null,durs):60;
+    var lastStart=close-minDur, nm=nowMin(), slots=walkinSlots(), dl;
+    if(nm>lastStart){
+      dl='<div class="wk-dl closed"><div class="big">⏰ '+t('spa.walkClosed')+'</div><div class="sub">'+t('spa.hours')+' '+min2hm(open)+'–'+min2hm(close)+'</div></div>';
+    } else {
+      dl='<div class="wk-dl"><div class="big">⏰ '+t('spa.walkClose')+' '+min2hm(lastStart)+'</div>'+
+        '<div class="sub">'+t('spa.hours')+' '+min2hm(open)+'–'+min2hm(close)+'</div>'+
+        (slots.length?'<div class="chips">'+slots.map(function(m){return '<span>'+min2hm(m)+'</span>';}).join('')+'</div>':'')+'</div>';
+    }
+    // ③ 가능한 마사지사 (접기/펼치기)
+    var provBody = now.length
       ? (pretty.length?'<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div>'+pretty.map(function(p){return prettyBig(p,false);}).join(''):'')+(reg.length?'<div class="grp-h">'+t('spa.tier.regular')+'</div><div class="provgrid">'+reg.map(card).join('')+'</div>':'')
       : '<div class="meta" style="color:var(--warm);padding:6px 0">'+t('spa.noneNow')+'</div>';
-    var slots=walkinSlots();
-    var slotBlock = slots.length ? '<div style="display:flex;flex-wrap:wrap;gap:7px">'+slots.map(function(m){ return '<span class="rbadge" style="background:var(--teal-l);color:var(--teal);font-size:13.5px;padding:7px 12px">'+min2hm(m)+'</span>'; }).join('')+'</div>' : '<div class="meta" style="color:var(--warm)">'+t('spa.noSlotNow')+'</div>';
-    return '<div class="sec"><div class="sec-h">💆 '+t('spa.availNow')+' ('+now.length+')</div>'+provBlock+'</div>'+
-      '<div class="sec"><div class="sec-h">⏰ '+t('spa.openSlots')+'</div>'+slotBlock+'</div>'+
-      '<div style="font-size:12.5px;color:var(--muted);line-height:1.55;background:#fbfdfc;border:1px solid #eef3f1;border-radius:11px;padding:12px 14px">'+t('spa.walkinHint')+'</div>';
+    var acc='<div class="wk-acc"><div class="wk-acch" onclick="toggleWalkin()">💆 '+t('spa.availNow')+' <span class="cnt">('+now.length+')</span><span class="arr '+(walkinOpen?'open':'')+'">▾</span></div>'+
+      (walkinOpen?'<div class="wk-accb">'+provBody+'</div>':'')+'</div>';
+    return hint+dl+acc;
   }
+  window.toggleWalkin=function(){ walkinOpen=!walkinOpen; render(); };
   function svcLabel(s){ return esc(s.name)+' · '+tn('spa.min',s.duration_min)+(s.price?' · ฿'+s.price:''); }
 
   window.pick=function(kind,id){ sel[kind]=id; render(); };
