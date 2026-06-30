@@ -137,15 +137,42 @@
     return out;
   }
   window.setSlot=function(v){ sel.slot=v; };
+  function nowSlotStart(){ var open=hm2min((store&&store.open_time)||'10:00'); return Math.max(open, Math.floor(nowMin()/30)*30); }
+  function anyRoomFree(t,dur){ return rooms.filter(function(r){return r.active!==false;}).some(function(r){ return !roomBusy(r.id,t,dur); }); }
+  function availNowProviders(){ var t=nowSlotStart(); return onShiftProviders().filter(function(p){ return provOnShift(p.id,t,30) && !provBusy(p.id,t,30); }); }
+  function walkinSlots(){
+    var dur=60, open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
+    var nm=nowMin(), act=onShiftProviders(), out=[];
+    for(var ti=Math.max(open,Math.floor(nm/30)*30); ti+dur<=close && out.length<8; ti+=30){
+      if(ti<nm) continue;
+      if(!anyRoomFree(ti,dur)) continue;
+      if(!act.some(function(p){ return provOnShift(p.id,ti,dur) && !provBusy(p.id,ti,dur); })) continue;
+      out.push(ti);
+    }
+    return out;
+  }
+  function walkinPanel(){
+    var now=availNowProviders();
+    var pretty=now.filter(function(p){return p.tier==='pretty';}), reg=now.filter(function(p){return p.tier!=='pretty';});
+    function card(p){ var ini=(p.name||'?').charAt(0).toUpperCase(); var ph=(p.photos&&p.photos.length)?p.photos[0]:p.avatar; var pic=ph?'<img src="'+esc(ph)+'">':esc(ini); var ty=p.tier==='pretty'?'pretty':'regular'; return '<div class="pcard '+ty+'" style="cursor:default"><span class="ptier '+ty+'">'+t('spa.tier.'+ty)+'</span><div class="pic">'+pic+'</div><div class="pnm">'+esc(p.name)+'</div></div>'; }
+    var provBlock = now.length
+      ? (pretty.length?'<div class="grp-h">⭐ '+t('spa.tier.pretty')+'</div><div class="provgrid">'+pretty.map(card).join('')+'</div>':'')+(reg.length?'<div class="grp-h">'+t('spa.tier.regular')+'</div><div class="provgrid">'+reg.map(card).join('')+'</div>':'')
+      : '<div class="meta" style="color:var(--warm);padding:6px 0">'+t('spa.noneNow')+'</div>';
+    var slots=walkinSlots();
+    var slotBlock = slots.length ? '<div style="display:flex;flex-wrap:wrap;gap:7px">'+slots.map(function(m){ return '<span class="rbadge" style="background:var(--teal-l);color:var(--teal);font-size:13.5px;padding:7px 12px">'+min2hm(m)+'</span>'; }).join('')+'</div>' : '<div class="meta" style="color:var(--warm)">'+t('spa.noSlotNow')+'</div>';
+    return '<div class="sec"><div class="sec-h">💆 '+t('spa.availNow')+' ('+now.length+')</div>'+provBlock+'</div>'+
+      '<div class="sec"><div class="sec-h">⏰ '+t('spa.openSlots')+'</div>'+slotBlock+'</div>'+
+      '<div style="font-size:12.5px;color:var(--muted);line-height:1.55;background:#fbfdfc;border:1px solid #eef3f1;border-radius:11px;padding:12px 14px">'+t('spa.walkinHint')+'</div>';
+  }
   function svcLabel(s){ return esc(s.name)+' · '+tn('spa.min',s.duration_min)+(s.price?' · ฿'+s.price:''); }
 
   window.pick=function(kind,id){ sel[kind]=id; render(); };
   window.pickProv=function(id){ sel.prov=(id==='any')?null:id; sel._provTouched=true; render(); };
-  window.setMode=function(m){ sel.mode=m; var n=document.getElementById('nick'); if(n) lastNick=n.value; render(); };
+  window.setMode=function(m){ sel.mode=m; render(); };
   var lastNick=(function(){ try{ return localStorage.getItem('quesme:nick')||''; }catch(e){ return ''; } })();
 
   window.book=function(){
-    var n=document.getElementById('nick'); var nick=(n&&n.value||'').trim();
+    var nick = lastNick || '고객';   // 로그인 닉네임 사용 (표시 닉네임 입력 없음)
     var ad=document.getElementById('addr'); if(ad) sel.addr=ad.value;
     var isOut=sel.loc==='outcall';
     var err=document.getElementById('err'); err.textContent='';
@@ -153,8 +180,6 @@
     if(isOut){ if(!(sel.addr||'').trim()){ err.textContent=t('spa.needAddr'); if(ad)ad.focus(); return; } }
     else if(!sel.room){ err.textContent=t('spa.needRoom'); return; }
     if(sel.mode==='reserve' && !sel.slot){ err.textContent=t('spa.noSlot'); return; }
-    if(!nick){ if(n){n.focus();} return; }
-    try{ localStorage.setItem('quesme:nick',nick); }catch(e){}
     var svc=byId(services,sel.svc);
     var id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'x'+Math.random().toString(36).slice(2)+Date.now();
     var row={ id:id, store_slug:slug, nick:nick, lang:lang, service_id:sel.svc, provider_id:sel.prov||null,
@@ -183,7 +208,14 @@
     chrome();
     var el=document.getElementById('body');
     if(myBooking && (myBooking.status==='waiting'||myBooking.status==='serving')){ el.innerHTML=ticket(myBooking); return; }
-    // 예약 폼
+    var isRes = sel.mode==='reserve';
+    var modeTabs = '<div class="modetabs"><button class="mtab '+(!isRes?'on':'')+'" onclick="setMode(\'now\')">'+t('spa.walkin')+'</button>'+
+      '<button class="mtab '+(isRes?'on':'')+'" onclick="setMode(\'reserve\')">'+t('spa.reserve')+'</button></div>';
+    if(!isRes){   // 워크인 = 지금 가능한 마사지사·시간대만 안내
+      el.innerHTML='<div class="sec"><div class="sec-h"><span class="num">1</span>'+t('spa.when')+'</div>'+modeTabs+'</div>'+walkinPanel();
+      return;
+    }
+    // ----- 시간 예약 -----
     var selProvObj = sel.prov ? providers.filter(function(p){return p.id===sel.prov;})[0] : null;
     var provTier = selProvObj ? selProvObj.tier : null;   // 지명 마사지사 등급에 맞는 요금만
     var svcOpts = services.filter(function(s){ return s.active!==false && (!provTier || s.tier===provTier || s.tier==='all'); }).map(function(s){
@@ -215,16 +247,11 @@
       return '<div class="opt '+(sel.room===r.id?'on':'')+'" onclick="pick(\'room\',\''+r.id+'\')"><div><div class="nm">'+esc(r.name)+'</div><div class="meta"><span class="rbadge '+ty+'">'+t('spa.room.'+ty)+'</span> '+tn('spa.cap',r.capacity||1)+'</div></div><div class="tick"></div></div>';
     }).join('') || '<div class="meta" style="color:#9aa7a4">—</div>';
 
-    var isRes = sel.mode==='reserve';
-    var avail = isRes ? availableSlots() : [];
-    if(isRes){ if(!sel.slot || avail.indexOf(hm2min(sel.slot))<0){ sel.slot = avail.length?min2hm(avail[0]):null; } }
-    var timeBody = isRes
-      ? (avail.length
-          ? '<div class="field"><label>'+t('spa.timePick')+'</label><select id="slot" onchange="setSlot(this.value)">'+avail.map(function(m){ var hm=min2hm(m); return '<option value="'+hm+'"'+(sel.slot===hm?' selected':'')+'>'+t('spa.today')+' '+hm+'</option>'; }).join('')+'</select></div>'
-          : '<div class="field" style="color:var(--warm);font-size:13px;line-height:1.5">'+t('spa.noSlot')+'</div>')
-      : '<div style="font-size:12.5px;color:var(--muted);line-height:1.55;background:#fbfdfc;border:1px solid #eef3f1;border-radius:11px;padding:11px 13px">'+t('spa.walkinHint')+'</div>';
-    var timeHtml = '<div class="modetabs"><button class="mtab '+(!isRes?'on':'')+'" onclick="setMode(\'now\')">'+t('spa.walkin')+'</button>'+
-      '<button class="mtab '+(isRes?'on':'')+'" onclick="setMode(\'reserve\')">'+t('spa.reserve')+'</button></div>'+timeBody;
+    var avail = availableSlots();
+    if(!sel.slot || avail.indexOf(hm2min(sel.slot))<0){ sel.slot = avail.length?min2hm(avail[0]):null; }
+    var timeBody = avail.length
+      ? '<div class="field"><label>'+t('spa.timePick')+'</label><select id="slot" onchange="setSlot(this.value)">'+avail.map(function(m){ var hm=min2hm(m); return '<option value="'+hm+'"'+(sel.slot===hm?' selected':'')+'>'+t('spa.today')+' '+hm+'</option>'; }).join('')+'</select></div>'
+      : '<div class="field" style="color:var(--warm);font-size:13px;line-height:1.5">'+t('spa.noSlot')+'</div>';
 
     var isOut = sel.loc==='outcall';
     var locHtml = '<div class="modetabs"><button class="mtab '+(!isOut?'on':'')+'" onclick="setLoc(\'shop\')">🏠 '+t('spa.locShop')+'</button>'+
@@ -236,13 +263,13 @@
     var placeTitle = isOut ? t('spa.address') : t('spa.room');
 
     el.innerHTML =
-      '<div class="sec"><div class="sec-h"><span class="num">1</span>'+t('spa.where')+'</div>'+locHtml+'</div>'+
-      '<div class="sec"><div class="sec-h"><span class="num">2</span>'+t('spa.svc')+'</div><div class="opts">'+svcOpts+'</div></div>'+
-      '<div class="sec"><div class="sec-h"><span class="num">3</span>'+t('spa.therapist')+'</div><div class="opts">'+provHtml+'</div></div>'+
-      '<div class="sec"><div class="sec-h"><span class="num">4</span>'+placeTitle+'</div>'+placeHtml+'</div>'+
-      '<div class="sec"><div class="sec-h"><span class="num">5</span>'+t('spa.when')+'</div>'+timeHtml+'</div>'+
-      '<div class="field" style="margin-bottom:14px"><label>'+t('field.nick')+'</label><input id="nick" maxlength="14" value="'+esc(lastNick)+'" placeholder="'+t('start.nickPh')+'"></div>'+
-      '<button class="bigbtn" id="bookBtn" onclick="book()">'+(isRes?t('spa.book'):t('spa.bookNow'))+'</button>'+
+      '<div class="sec"><div class="sec-h"><span class="num">1</span>'+t('spa.when')+'</div>'+modeTabs+'</div>'+
+      '<div class="sec"><div class="sec-h"><span class="num">2</span>'+t('spa.where')+'</div>'+locHtml+'</div>'+
+      '<div class="sec"><div class="sec-h"><span class="num">3</span>'+t('spa.svc')+'</div><div class="opts">'+svcOpts+'</div></div>'+
+      '<div class="sec"><div class="sec-h"><span class="num">4</span>'+t('spa.therapist')+'</div><div class="opts">'+provHtml+'</div></div>'+
+      '<div class="sec"><div class="sec-h"><span class="num">5</span>'+placeTitle+'</div>'+placeHtml+'</div>'+
+      '<div class="sec"><div class="sec-h"><span class="num">6</span>'+t('spa.timePick')+'</div>'+timeBody+'</div>'+
+      '<button class="bigbtn" id="bookBtn" onclick="book()">'+t('spa.book')+'</button>'+
       '<div class="err" id="err"></div>';
     if(isRes){ var sl=document.getElementById('slot'); if(sl){ sl.addEventListener('change',function(){ sel.slot=sl.value; }); if(!sel.slot) sel.slot=sl.value; } }
   }
