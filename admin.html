@@ -49,7 +49,7 @@
     <input id="liPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="bigbtn" onclick="doLogin()">로그인</button>
     <div class="loginErr" id="liErr"></div>
-    <div class="loginAlt" id="loginAlt">관리자·샵매니저·마사지사 공용 로그인입니다.<br>아이디에 맞는 화면으로 자동 이동해요.<br><a id="firstLogin" onclick="doSignup()">처음이면 비밀번호 설정 →</a></div>
+    <div class="loginAlt" id="loginAlt">관리자·매니저·마사지사·고객 공용 로그인 — 아이디에 맞는 화면으로 자동 이동합니다.<br><a onclick="doSignup()">직원 첫 로그인(비밀번호 설정) →</a><br><a href="login.html">고객이신가요? 회원가입 →</a></div>
   </div>
 </div>
 <div class="adm">
@@ -68,8 +68,20 @@
   function shopName(s){ var n=s.names||{}; return n.ko||n.en||n.th||s.slug; }
   function emailOf(){ var id=(document.getElementById('liId').value||'').trim().toLowerCase(); return id.indexOf('@')<0?id+'@thaimate.app':id; }
 
-  window.doLogin=function(){ document.getElementById('liErr').textContent='';
-    supa.auth.signInWithPassword({ email:emailOf(), password:document.getElementById('liPw').value||'' }).then(function(r){ if(r&&r.error) document.getElementById('liErr').textContent='로그인 실패 — 처음이면 아래 "비밀번호 설정"'; }); };
+  window.doLogin=function(){
+    var id=(document.getElementById('liId').value||'').trim().toLowerCase(), pw=document.getElementById('liPw').value||'';
+    var errEl=document.getElementById('liErr'); errEl.textContent='';
+    if(!id||!pw){ errEl.textContent='아이디와 비밀번호를 입력하세요'; return; }
+    if(id.indexOf('@')>=0){ supa.auth.signInWithPassword({email:id,password:pw}).then(function(r){ if(r&&r.error) errEl.textContent='로그인 실패 — 아이디/비밀번호 확인'; }); return; }
+    // 1) 관리자·매니저·마사지사(@thaimate.app) → 성공 시 onAuthStateChange가 역할별 라우팅
+    supa.auth.signInWithPassword({ email:id+'@thaimate.app', password:pw }).then(function(r){
+      if(!(r&&r.error)) return;
+      // 2) 고객(@guest.quesme.app)
+      supa.auth.signInWithPassword({ email:id+'@guest.quesme.app', password:pw }).then(function(r2){
+        if(r2&&r2.error){ errEl.textContent='로그인 실패 — 아이디/비밀번호 확인'; document.getElementById('loginAlt').style.display='block'; }
+      });
+    });
+  };
   window.doSignup=function(){ var pw=document.getElementById('liPw').value||''; document.getElementById('liErr').textContent='';
     if(pw.length<6){ document.getElementById('liErr').textContent='비밀번호 6자 이상 입력 후 설정'; return; }
     supa.auth.signUp({ email:emailOf(), password:pw }).then(function(r){ if(r&&r.error) document.getElementById('liErr').textContent='설정 실패 — '+(r.error.message||''); }); };
@@ -78,6 +90,10 @@
   // 역할 자동 식별 → 라우팅
   function route(email){
     myEmail=email; var loginId=email.split('@')[0];
+    if(email.indexOf('@guest.quesme.app')>=0){   // 고객 → 둘러보기/예약
+      try{ localStorage.setItem('quesme:nick',loginId); }catch(e){}
+      location.replace('index.html'); return;
+    }
     supa.from('qsm_staff').select('*').eq('email',email).then(function(r){
       var rows=r.data||[];
       var adminRow=rows.filter(function(x){return x.store_slug==='*';})[0];
