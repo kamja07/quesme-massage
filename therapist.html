@@ -18,23 +18,22 @@
   .sec-h{font-size:13.5px;font-weight:800;color:var(--ink);margin:0 0 11px;display:flex;align-items:center;gap:6px;}
   .sec-h .hint{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;}
   /* 주간 근무표 그리드 */
-  .pen-notice{background:#fff3cd;border:1px solid #ffe08a;border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#7a5200;font-weight:600;margin-bottom:11px;}
+  .pen-notice{background:#fff3cd;border:1px solid #ffe08a;border-radius:11px;padding:9px 12px;font-size:12px;line-height:1.5;color:#7a5200;font-weight:600;margin-bottom:9px;}
   .pen-notice b{color:var(--warm);font-weight:800;}
-  .glegend{display:flex;align-items:center;gap:14px;font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:8px;}
-  .glegend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #e2e9e7;}
+  .glegend{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:7px;}
+  .glegend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px;border:1px solid #e2e9e7;}
   .glegend i.work{background:#fff;} .glegend i.rest{background:var(--warm);border-color:var(--warm);}
   .gwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #eef3f1;border-radius:12px;}
-  .gtable{border-collapse:collapse;table-layout:fixed;}
+  .gtable{border-collapse:collapse;table-layout:fixed;width:100%;}
   .gtable th,.gtable td{border:1px solid #eef3f1;}
-  .gtable thead th{position:sticky;top:0;background:#fff;z-index:2;padding:5px 3px;font-size:11px;font-weight:800;color:var(--ink);min-width:42px;line-height:1.25;}
-  .gtable thead th .wd{display:block;font-size:9.5px;font-weight:700;color:var(--muted);}
+  .gtable thead th{position:sticky;top:0;background:#fff;z-index:2;padding:4px 2px;font-size:10.5px;font-weight:800;color:var(--ink);line-height:1.2;}
+  .gtable thead th .wd{display:block;font-size:9px;font-weight:700;color:var(--muted);}
   .gtable thead th.late{background:#fff3cd;color:var(--warm);}
   .gtable thead th.late .wd{color:var(--warm);}
-  .gtable thead th.late .lk{display:block;font-size:9px;font-weight:800;color:var(--warm);}
-  .gtable th.timecol,.gtable td.timecol{position:sticky;left:0;background:#fbfdfc;z-index:1;font-size:10px;color:var(--muted);font-weight:700;padding:0 6px;white-space:nowrap;width:42px;}
+  .gtable thead th.late .lk{font-size:9px;}
+  .gtable th.timecol,.gtable td.timecol{position:sticky;left:0;background:#fbfdfc;z-index:1;font-size:10px;color:var(--ink);font-weight:800;padding:0 5px;white-space:nowrap;width:40px;}
   .gtable thead th.timecol{z-index:3;}
-  .gtable td.timecol.hh{color:var(--ink);font-weight:800;}
-  .gtable td.cell{height:24px;cursor:pointer;background:#fff;}
+  .gtable td.cell{height:15px;cursor:pointer;background:#fff;}
   .gtable td.cell.rest{background:var(--warm);}
   .gtable td.cell.latecol{box-shadow:inset 0 0 0 99px rgba(255,243,205,.5);}
   .gtable td.cell.rest.latecol{box-shadow:none;}
@@ -199,9 +198,12 @@
     var notice='<div class="pen-notice">⚠️ 근무일 <b>'+r.cutoff+'일 전까지 무료</b>로 바꾸세요. 그 이후(🔒 표시된 날짜) 변경하면 <b>건당 ฿'+r.penalty+'</b> 벌금이 부과됩니다.</div>';
     var legend='<div class="glegend"><span><i class="work"></i>근무</span><span><i class="rest"></i>비근무</span><span style="margin-left:auto">칸 탭 → 빨강(쉬는 시간)</span></div>';
     var head='<tr><th class="timecol"></th>'+wk.map(function(d){ var dt=new Date(d+'T00:00:00'), late=daysUntil(d)<r.cutoff&&r.penalty>0; return '<th class="'+(late?'late':'')+'">'+(dt.getMonth()+1)+'/'+dt.getDate()+'<span class="wd">'+WD[dt.getDay()]+(daysUntil(d)===0?'·오늘':'')+'</span>'+(late?'<span class="lk">🔒</span>':'')+'</th>'; }).join('')+'</tr>';
-    var body=rows.map(function(m){ var hh=(m%60===0);
+    var body=rows.map(function(m,idx){
       var cells=wk.map(function(d){ var late=daysUntil(d)<r.cutoff&&r.penalty>0, rest=!!drafts[d].blocks[m]; return '<td class="cell'+(rest?' rest':'')+(late?' latecol':'')+'" onclick="toggleCell(\''+d+'\','+m+')"></td>'; }).join('');
-      return '<tr><td class="timecol'+(hh?' hh':'')+'">'+min2hm(m)+'</td>'+cells+'</tr>';
+      // 시각 라벨은 정시(:00)에만, 두 칸(정시·30분)에 걸쳐 가운데 선상에 표시
+      if(m%60===0){ var half = idx+1<rows.length && rows[idx+1]===m+30; return '<tr><td class="timecol" rowspan="'+(half?2:1)+'">'+min2hm(m)+'</td>'+cells+'</tr>'; }
+      if(idx>0 && rows[idx-1]===m-30 && rows[idx-1]%60===0) return '<tr>'+cells+'</tr>';   // :30 → 위 rowspan이 덮음
+      return '<tr><td class="timecol">'+min2hm(m)+'</td>'+cells+'</tr>';                    // 정시 짝 없는 :30(예외)
     }).join('');
     var table='<div class="gwrap"><table class="gtable"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
     var lbl = finedN? ('벌금 ฿'+(finedN*r.penalty)+' 감수하고 저장 · '+dirtyN+'일') : ('변경 저장'+(dirtyN?' · '+dirtyN+'일':''));
