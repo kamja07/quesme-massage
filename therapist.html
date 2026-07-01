@@ -187,8 +187,14 @@
         start_time:(shop&&shop.open_time)||'10:00', end_time:(shop&&shop.close_time)||'22:00' }; });
     supa.from('qsm_shifts').upsert(payload,{onConflict:'provider_id,work_date'}).then(function(res){
       if(res&&res.error){ alert('저장 실패: '+(res.error.message||res.error)); return; }
-      if(fined.length){ supa.from('qsm_penalties').insert(fined.map(function(d){ return { store_slug:me.store_slug, provider_id:me.id, work_date:d, amount:r.penalty, reason:'late_edit' }; })).then(loadAll); }
-      else loadAll();
+      // 벌금 재조정: 이번에 저장한 '2일 이내' 날짜의 기존 미납 벌금을 지우고,
+      // 근무→비근무로 '새로' 뺀 경우(fined)만 다시 부과 → 근무로 되돌리면 벌금이 사라짐
+      var cutoffDirty=dd.filter(function(d){ return daysUntil(d)<r.cutoff && r.penalty>0; });
+      if(!cutoffDirty.length){ loadAll(); return; }
+      supa.from('qsm_penalties').delete().eq('provider_id',me.id).eq('reason','late_edit').eq('status','pending').in('work_date',cutoffDirty).then(function(){
+        if(fined.length){ supa.from('qsm_penalties').insert(fined.map(function(d){ return { store_slug:me.store_slug, provider_id:me.id, work_date:d, amount:r.penalty, reason:'late_edit' }; })).then(loadAll); }
+        else loadAll();
+      });
     });
   };
   window.advance=function(id,to){ supa.from('qsm_bookings').update({status:to}).eq('id',id).then(loadAll); };
