@@ -90,9 +90,9 @@
   // 역할 자동 식별 → 라우팅
   function route(email){
     myEmail=email; var loginId=email.split('@')[0];
-    if(email.indexOf('@guest.quesme.app')>=0){   // 고객 → 쇼케이스
+    if(email.indexOf('@guest.quesme.app')>=0){   // 고객 → 전체 샵 리스트
       try{ localStorage.setItem('quesme:nick',loginId); }catch(e){}
-      location.replace('showcase.html'); return;
+      location.replace('home.html'); return;
     }
     supa.from('qsm_staff').select('*').eq('email',email).then(function(r){
       var rows=r.data||[];

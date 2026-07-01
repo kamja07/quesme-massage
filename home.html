@@ -81,8 +81,10 @@
     document.getElementById('q').placeholder=t('home.search');
     var areas = Object.keys(shops.reduce(function(m,s){ if(s.area)m[s.area]=1; return m; },{}));
     document.getElementById('area').innerHTML = '<option value="all">📍 '+t('home.allAreas')+'</option>'+areas.map(function(a){ return '<option value="'+a+'"'+(filter.area===a?' selected':'')+'>📍 '+areaName(a)+'</option>'; }).join('');
-    var bf=document.getElementById('bizfoot'); if(bf) bf.style.display='none';   // 로그인은 통합 로그인(index.html)에서만
+    var bf=document.getElementById('bizfoot');   // 로그인은 통합 로그인에서만 · 여기선 로그아웃만
+    if(bf){ var nk=''; try{ nk=localStorage.getItem('quesme:nick')||''; }catch(e){} bf.innerHTML='<div class="bt">'+(nk?esc(nk)+'님':'')+'</div><div class="brow"><a class="ghost" onclick="doLogout()" style="cursor:pointer">로그아웃</a></div>'; }
   }
+  window.doLogout=function(){ supa.auth.signOut().then(function(){ location.replace('index.html'); }); };
 
   function render(){
     var list=document.getElementById('list');

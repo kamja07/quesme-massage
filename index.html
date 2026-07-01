@@ -108,7 +108,7 @@
 
   function route(email){
     var loginId=email.split('@')[0];
-    if(email.indexOf(GUEST)>=0){ try{ localStorage.setItem('quesme:nick',loginId); }catch(e){} location.replace('showcase.html'); return; }
+    if(email.indexOf(GUEST)>=0){ try{ localStorage.setItem('quesme:nick',loginId); }catch(e){} location.replace('home.html'); return; }   // 고객 → 전체 샵 리스트
     supa.from('qsm_staff').select('role,store_slug').eq('email',email).then(function(r){
       var rows=r.data||[];
       var admin=rows.filter(function(x){return x.store_slug==='*';})[0];
