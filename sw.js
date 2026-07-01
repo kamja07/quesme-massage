@@ -1,5 +1,5 @@
 /* QuesMe Massage — service worker (app shell cache, network-first) */
-var CACHE = 'qsmmassage-v15';
+var CACHE = 'qsmmassage-v16';
 var SHELL = [
   './', 'index.html', 'login.html', 'home.html', 'book.html', 'therapist.html', 'admin.html', 'shop-console.html', 'qr.html',
   'app.css', 'i18n.js', 'inapp.js', 'pwa.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'

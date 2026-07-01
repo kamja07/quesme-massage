@@ -407,7 +407,22 @@
 
   supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
   supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
-  function updateAuth(session){ document.getElementById('loginwrap').style.display=session?'none':'flex'; if(session && slug){ load(); } }
+  function updateAuth(session){
+    var lw=document.getElementById('loginwrap');
+    if(!session){ lw.style.display='flex'; return; }
+    lw.style.display='none';
+    var email=(session.user&&session.user.email)||'', loginId=email.split('@')[0];
+    supa.from('qsm_staff').select('role,store_slug').eq('email',email).then(function(r){
+      var rows=r.data||[];
+      var staffHere=rows.some(function(x){ return x.store_slug===slug || x.store_slug==='*'; });
+      if(staffHere){ if(slug) load(); return; }
+      // 이 샵 직원이 아님 — 마사지사면 본인 화면으로, 아니면 권한 없음
+      supa.from('qsm_providers').select('id').eq('login_id',loginId).limit(1).then(function(p){
+        if(p.data && p.data.length){ location.replace('therapist.html'); return; }
+        document.getElementById('body').innerHTML='<div class="empty" style="padding:48px 20px">이 샵 콘솔 접근 권한이 없어요.<br><code>'+esc(loginId)+'</code><br><button class="ibtn" style="margin-top:14px" onclick="doLogout()">로그아웃</button></div>';
+      });
+    });
+  }
   supa.channel('qsm-sc-'+slug)
     .on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings',filter:'store_slug=eq.'+slug},function(){ load(); })
     .on('postgres_changes',{event:'*',schema:'public',table:'qsm_penalties',filter:'store_slug=eq.'+slug},function(){ load(); })
