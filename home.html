@@ -81,7 +81,7 @@
     document.getElementById('q').placeholder=t('home.search');
     var areas = Object.keys(shops.reduce(function(m,s){ if(s.area)m[s.area]=1; return m; },{}));
     document.getElementById('area').innerHTML = '<option value="all">📍 '+t('home.allAreas')+'</option>'+areas.map(function(a){ return '<option value="'+a+'"'+(filter.area===a?' selected':'')+'>📍 '+areaName(a)+'</option>'; }).join('');
-    document.getElementById('bizfoot').innerHTML = '<div class="bt">관리자 · 샵매니저 · 마사지사</div><div class="brow"><a class="primary" href="admin.html">로그인</a></div>';
+    var bf=document.getElementById('bizfoot'); if(bf) bf.style.display='none';   // 로그인은 통합 로그인(index.html)에서만
   }
 
   function render(){
