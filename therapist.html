@@ -139,7 +139,7 @@
       document.getElementById('who').textContent = me.name + (me.freelance?' · 프리랜서':'');
       document.getElementById('sub').textContent = (TIER[me.tier]||'') + (me.outcall_ok?' · 출장 가능':'');
       Promise.all([
-        supa.from('qsm_shops').select('slug,open_time,close_time,sched').eq('slug',me.store_slug).maybeSingle(),
+        supa.from('qsm_shops').select('*').eq('slug',me.store_slug).maybeSingle(),
         supa.from('qsm_services').select('*').eq('store_slug',me.store_slug),
         supa.from('qsm_rooms').select('*').eq('store_slug',me.store_slug)
       ]).then(function(rr){ shop=rr[0].data||{}; services=rr[1].data||[]; rooms=rr[2].data||[]; loadAll(); });
