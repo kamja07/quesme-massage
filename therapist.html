@@ -8,34 +8,60 @@
 <title>QuesMe · 마사지사</title>
 <link rel="stylesheet" href="app.css">
 <style>
-  .th{max-width:560px; margin:0 auto; min-height:100%; background:#fff;}
-  .th-top{background:var(--ink); color:#fff; padding:14px 18px; display:flex; align-items:center; gap:11px;}
+  .th{max-width:430px; margin:0 auto; min-height:100%; background:#fff; box-shadow:0 0 40px rgba(0,0,0,.05);}
+  .th-top{background:var(--ink); color:#fff; padding:14px 18px; display:flex; align-items:center; gap:11px; position:sticky; top:0; z-index:5;}
   .th-top .av{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:#2c4a52;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;}
   .th-top .av img{width:100%;height:100%;object-fit:cover;}
   .th-top .nm{font-size:16px;font-weight:800;} .th-top .sub{font-size:12px;opacity:.8;}
   .th-top .logout{margin-left:auto;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;}
-  .sec{padding:14px 18px;}
-  .sec-h{font-size:13px;font-weight:800;color:var(--ink);margin:0 0 11px;}
-  .ci{border:1.5px solid #eef3f1;border-radius:15px;padding:15px;}
-  .ci.on{border-color:var(--teal);background:var(--teal-l);}
-  .ci-row{display:flex;align-items:center;gap:10px;}
-  .ci-row .t{font-size:16px;font-weight:800;color:var(--ink);}
-  .toggle{margin-left:auto;width:54px;height:30px;border-radius:18px;background:#cfd8d4;position:relative;transition:.15s;cursor:pointer;flex:0 0 54px;}
-  .toggle.on{background:var(--teal);}
-  .toggle .k{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.15s;}
-  .toggle.on .k{left:27px;}
-  .availrow{display:flex;gap:7px;margin-top:13px;}
-  .achip{flex:1;padding:10px;border-radius:11px;border:1.5px solid #d7e2df;background:#fff;font-size:13px;font-weight:700;color:var(--muted);text-align:center;cursor:pointer;}
+  .sec{padding:14px 16px;}
+  .sec-h{font-size:13.5px;font-weight:800;color:var(--ink);margin:0 0 11px;display:flex;align-items:center;gap:6px;}
+  .sec-h .hint{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;}
+  /* 주간 스케줄 */
+  .day{border:1.5px solid #eef3f1;border-radius:15px;padding:13px 14px;margin-bottom:10px;}
+  .day.off{background:#fbf3f2;border-color:#f2ddd9;}
+  .day.late{border-color:#ffe0a3;}
+  .day-h{display:flex;align-items:center;gap:9px;}
+  .day-h .dt{font-size:15px;font-weight:800;color:var(--ink);}
+  .day-h .wd{font-size:12px;color:var(--muted);font-weight:700;}
+  .day-h .warn{font-size:10.5px;font-weight:800;color:#9a6a00;background:#fff3cd;padding:2px 8px;border-radius:20px;}
+  .day-h .today{font-size:10.5px;font-weight:800;color:var(--teal);background:var(--teal-l);padding:2px 8px;border-radius:20px;}
+  .wtog{margin-left:auto;display:flex;gap:5px;}
+  .wtog button{padding:7px 12px;border-radius:9px;border:1.5px solid #d7e2df;background:#fff;font-size:12.5px;font-weight:800;color:var(--muted);font-family:inherit;cursor:pointer;}
+  .wtog button.on.work{border-color:var(--teal);background:var(--teal);color:#fff;}
+  .wtog button.on.rest{border-color:var(--warm);background:var(--warm);color:#fff;}
+  .availrow{display:flex;gap:6px;margin-top:12px;}
+  .achip{flex:1;padding:9px;border-radius:10px;border:1.5px solid #d7e2df;background:#fff;font-size:12.5px;font-weight:700;color:var(--muted);text-align:center;cursor:pointer;}
   .achip.on{border-color:var(--teal);background:var(--teal);color:#fff;}
-  .hours{display:flex;align-items:center;gap:8px;margin-top:12px;}
-  .hours select{flex:1;padding:10px;border:1.5px solid #d7e2df;border-radius:10px;font-size:14px;font-family:inherit;}
-  .bk{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid #eef3f1;border-radius:13px;margin-bottom:9px;}
+  .blk{margin-top:12px;}
+  .blk-t{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:7px;}
+  .slot{display:inline-flex;align-items:center;gap:6px;background:#fdecea;border:1px solid #f2ddd9;color:var(--warm);font-size:12.5px;font-weight:700;padding:5px 6px 5px 11px;border-radius:20px;margin:0 6px 6px 0;}
+  .slot b{font-weight:800;} .slot .x{width:18px;height:18px;border-radius:50%;background:#fff;color:var(--warm);border:none;font-size:12px;cursor:pointer;line-height:1;}
+  .addslot{display:flex;align-items:center;gap:6px;margin-top:4px;}
+  .addslot select{flex:1;min-width:0;padding:9px;border:1.5px solid #d7e2df;border-radius:9px;font-size:13px;font-family:inherit;}
+  .addslot .ab{flex:0 0 auto;padding:9px 12px;border-radius:9px;border:none;background:var(--teal-l);color:var(--teal);font-weight:800;font-size:13px;cursor:pointer;}
+  .daysave{margin-top:12px;}
+  .daysave button{width:100%;padding:11px;border-radius:11px;border:none;background:var(--teal);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;}
+  .daysave button.pen{background:var(--warm);}
+  .worknote{font-size:12px;color:var(--teal);font-weight:700;margin-top:11px;}
+  /* 벌금 */
+  .penbox{background:#fff8e6;border:1px solid #ffe7a0;border-radius:14px;padding:13px 15px;}
+  .penbox.zero{background:var(--teal-l);border-color:var(--teal-line);}
+  .pen-sum{font-size:14px;font-weight:800;color:#9a6a00;}
+  .penbox.zero .pen-sum{color:var(--teal);}
+  .pen-list{margin-top:9px;}
+  .pen-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:6px 0;border-top:1px solid #ffe7a0;}
+  .pen-row .k{color:#a8810a;} .pen-row .v{font-weight:800;color:#9a6a00;}
+  .pen-row .st{font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:20px;}
+  .st.pending{background:#fdecea;color:var(--warm);} .st.waived{background:var(--teal-l);color:var(--teal);} .st.paid{background:#eef3f1;color:var(--muted);}
+  /* 예약 */
+  .bk{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #eef3f1;border-radius:13px;margin-bottom:9px;}
   .bk.serving{border-color:var(--warm);background:var(--warm-l);}
-  .bk .tm{flex:0 0 56px;text-align:center;}
-  .bk .tm .h{font-size:15px;font-weight:800;color:var(--teal);} .bk .tm .d{font-size:10px;color:var(--muted);}
-  .bk .mid{flex:1;min-width:0;} .bk .nick{font-size:15px;font-weight:800;} .bk .meta{font-size:12px;color:var(--muted);margin-top:2px;}
+  .bk .tm{flex:0 0 54px;text-align:center;}
+  .bk .tm .h{font-size:14.5px;font-weight:800;color:var(--teal);} .bk .tm .d{font-size:10px;color:var(--muted);}
+  .bk .mid{flex:1;min-width:0;} .bk .nick{font-size:14.5px;font-weight:800;} .bk .meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
   .bk .acts{display:flex;flex-direction:column;gap:5px;}
-  .empty{text-align:center;color:#9aa7a4;padding:26px;font-size:13px;}
+  .empty{text-align:center;color:#9aa7a4;padding:24px;font-size:13px;}
   .otag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;background:#e6f1fb;color:#185fa5;}
   /* login */
   .loginwrap{position:fixed;inset:0;background:#0c1a1f;display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;}
@@ -53,7 +79,7 @@
 <div class="loginwrap" id="loginwrap">
   <div class="logincard">
     <div class="loginh">QuesMe</div>
-    <div class="logint" id="loginT">마사지사 로그인</div>
+    <div class="logint">마사지사 로그인</div>
     <input id="liId" placeholder="아이디 (샵에서 발급)" autocapitalize="off">
     <input id="liPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="bigbtn" onclick="doLogin()" id="loginBtn">로그인</button>
@@ -74,11 +100,19 @@
 (function(){
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var TIER={pretty:'프리티',regular:'전문'};
-  var me=null, myShift=null, services=[], rooms=[], bookings=[];
-  function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  var WD=['일','월','화','수','목','금','토'];
+  var me=null, shop=null, services=[], rooms=[], bookings=[], shiftMap={}, penalties=[], drafts={};
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function dstr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function today(){ return dstr(new Date()); }
+  function addDays(base,n){ var d=new Date(base+'T00:00:00'); d.setDate(d.getDate()+n); return d; }
+  function weekDates(){ var out=[], t=today(); for(var i=0;i<7;i++) out.push(dstr(addDays(t,i))); return out; }
+  function daysUntil(date){ var a=new Date(today()+'T00:00:00'), b=new Date(date+'T00:00:00'); return Math.round((b-a)/86400000); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
   function byId(a,id){ for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
   function emailOf(){ var id=(document.getElementById('liId').value||'').trim().toLowerCase(); return id.indexOf('@')<0?id+'@thaimate.app':id; }
+  function rules(){ var s=(shop&&shop.sched)||{}; return { cutoff:s.cutoffDays!=null?s.cutoffDays:2, penalty:s.penalty||0 }; }
 
   window.doLogin=function(){
     document.getElementById('liErr').textContent='';
@@ -105,65 +139,118 @@
       document.getElementById('who').textContent = me.name + (me.freelance?' · 프리랜서':'');
       document.getElementById('sub').textContent = (TIER[me.tier]||'') + (me.outcall_ok?' · 출장 가능':'');
       Promise.all([
+        supa.from('qsm_shops').select('slug,open_time,close_time,sched').eq('slug',me.store_slug).maybeSingle(),
         supa.from('qsm_services').select('*').eq('store_slug',me.store_slug),
         supa.from('qsm_rooms').select('*').eq('store_slug',me.store_slug)
-      ]).then(function(rr){ services=rr[0].data||[]; rooms=rr[1].data||[]; loadDay(); });
+      ]).then(function(rr){ shop=rr[0].data||{}; services=rr[1].data||[]; rooms=rr[2].data||[]; loadAll(); });
     });
   }
 
-  function loadDay(){
+  function loadAll(){
     if(!me) return;
+    var wk=weekDates();
     Promise.all([
-      supa.from('qsm_shifts').select('*').eq('provider_id',me.id).eq('work_date',today()).maybeSingle(),
-      supa.from('qsm_bookings').select('*').eq('provider_id',me.id).eq('book_date',today()).neq('status','cancelled').neq('status','done')
-    ]).then(function(r){ myShift=r[0].data||null; bookings=r[1].data||[]; render(); });
+      supa.from('qsm_shifts').select('*').eq('provider_id',me.id).gte('work_date',wk[0]).lte('work_date',wk[6]),
+      supa.from('qsm_bookings').select('*').eq('provider_id',me.id).gte('book_date',today()).neq('status','cancelled').neq('status','done'),
+      supa.from('qsm_penalties').select('*').eq('provider_id',me.id).order('work_date',{ascending:false})
+    ]).then(function(r){
+      shiftMap={}; (r[0].data||[]).forEach(function(s){ shiftMap[s.work_date]=s; });
+      bookings=r[1].data||[]; penalties=r[2].data||[];
+      drafts={};   // 저장된 값으로 draft 초기화
+      wk.forEach(function(d){ var s=shiftMap[d]; drafts[d]= s? { off:!!s.off, avail:s.avail||'shop', slots:(s.off_slots||[]).slice() } : { off:false, avail:'shop', slots:[] }; });
+      render();
+    });
   }
 
-  var draft={ on:false, avail:'shop', start:'10:00', end:'22:00' };
-  function syncDraft(){ if(myShift){ draft.on=!myShift.off; draft.avail=myShift.avail||'shop'; draft.start=myShift.start_time||'10:00'; draft.end=myShift.end_time||'22:00'; } }
-  window.tog=function(){ draft.on=!draft.on; saveShift(); };
-  window.setAvail=function(v){ draft.avail=v; saveShift(); };
-  window.setHr=function(k,v){ draft[k]=v; saveShift(); };
-  function saveShift(){
-    supa.from('qsm_shifts').upsert({ store_slug:me.store_slug, provider_id:me.id, work_date:today(), avail:draft.avail, start_time:draft.start, end_time:draft.end, off:!draft.on }, { onConflict:'provider_id,work_date' }).then(function(){ loadDay(); });
-  }
-  window.advance=function(id,to){ supa.from('qsm_bookings').update({status:to}).eq('id',id).then(function(){ loadDay(); }); }
+  // ---- draft 조작 ----
+  window.setWork=function(date,off){ drafts[date].off=off; render(); };
+  window.setAvailD=function(date,v){ drafts[date].avail=v; render(); };
+  window.addSlotD=function(date){
+    var s=document.getElementById('ss_'+date).value, e=document.getElementById('se_'+date).value;
+    if(hm2min(e)<=hm2min(s)){ alert('종료 시간이 시작보다 늦어야 해요'); return; }
+    drafts[date].slots.push({s:s,e:e}); drafts[date].slots.sort(function(a,b){return hm2min(a.s)-hm2min(b.s);}); render();
+  };
+  window.rmSlotD=function(date,i){ drafts[date].slots.splice(i,1); render(); };
+  function hm2min(x){ var p=(x||'').split(':'); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); }
 
-  function hourOpts(sel){ var o=''; for(var h=8;h<=23;h++){ var v=String(h).padStart(2,'0')+':00'; o+='<option value="'+v+'"'+(sel===v?' selected':'')+'>'+v+'</option>'; var v2=String(h).padStart(2,'0')+':30'; o+='<option value="'+v2+'"'+(sel===v2?' selected':'')+'>'+v2+'</option>'; } return o; }
+  function dirty(date){
+    var d=drafts[date], s=shiftMap[date];
+    var saved = s? { off:!!s.off, avail:s.avail||'shop', slots:(s.off_slots||[]) } : { off:false, avail:'shop', slots:[] };
+    return JSON.stringify({o:d.off,a:d.avail,s:d.slots})!==JSON.stringify({o:saved.off,a:saved.avail,s:saved.slots});
+  }
+
+  window.saveDay=function(date){
+    var d=drafts[date], existed=!!shiftMap[date], du=daysUntil(date), r=rules();
+    var late = du < r.cutoff, willFine = late && existed && r.penalty>0;
+    if(willFine && !confirm(date+' ('+WD[new Date(date+'T00:00:00').getDay()]+') 스케줄은 근무 '+r.cutoff+'일 이내라\n수정 시 벌금 ฿'+r.penalty+'이 부과됩니다.\n\n그래도 변경할까요?')) return;
+    supa.from('qsm_shifts').upsert({
+      store_slug:me.store_slug, provider_id:me.id, work_date:date,
+      off:d.off, avail:d.avail, off_slots:d.slots,
+      start_time:(shop&&shop.open_time)||'10:00', end_time:(shop&&shop.close_time)||'22:00'
+    }, { onConflict:'provider_id,work_date' }).then(function(res){
+      if(res&&res.error){ alert('저장 실패: '+(res.error.message||res.error)); return; }
+      if(willFine){
+        supa.from('qsm_penalties').insert({ store_slug:me.store_slug, provider_id:me.id, work_date:date, amount:r.penalty, reason:'late_edit' }).then(loadAll);
+      } else loadAll();
+    });
+  };
+  window.advance=function(id,to){ supa.from('qsm_bookings').update({status:to}).eq('id',id).then(loadAll); };
+
+  function hourOpts(sel){ var o=''; for(var h=8;h<=23;h++){ ['00','30'].forEach(function(mm){ var v=pad(h)+':'+mm; o+='<option value="'+v+'"'+(sel===v?' selected':'')+'>'+v+'</option>'; }); } return o; }
+
+  function dayCard(date){
+    var d=drafts[date], du=daysUntil(date), r=rules();
+    var late = du < r.cutoff, dt=new Date(date+'T00:00:00');
+    var badge = du===0?'<span class="today">오늘</span>':(late&&r.penalty>0?'<span class="warn">🔒 '+r.cutoff+'일 이내 · 수정 시 ฿'+r.penalty+'</span>':'');
+    var head='<div class="day-h"><div class="dt">'+(dt.getMonth()+1)+'/'+dt.getDate()+'</div><div class="wd">('+WD[dt.getDay()]+')</div>'+badge+
+      '<div class="wtog"><button class="work '+(!d.off?'on':'')+'" onclick="setWork(\''+date+'\',false)">근무</button>'+
+      '<button class="rest '+(d.off?'on':'')+'" onclick="setWork(\''+date+'\',true)">휴무</button></div></div>';
+    var body='';
+    if(!d.off){
+      var avail='<div class="availrow">'+['shop','outcall','both'].map(function(a){ var lbl={shop:'🏠 샵',outcall:'🚗 출장',both:'샵+출장'}[a]; var dis=(a!=='shop'&&!me.outcall_ok); return '<div class="achip '+(d.avail===a?'on':'')+'" '+(dis?'style="opacity:.35;pointer-events:none"':'onclick="setAvailD(\''+date+'\',\''+a+'\')"')+'>'+lbl+'</div>'; }).join('')+'</div>';
+      var chips=d.slots.length?d.slots.map(function(sl,i){ return '<span class="slot"><b>'+sl.s+'~'+sl.e+'</b><button class="x" onclick="rmSlotD(\''+date+'\','+i+')">✕</button></span>'; }).join(''):'<div style="font-size:12px;color:var(--muted)">차단 없음 — 매장 운영시간 전체 근무</div>';
+      var add='<div class="addslot"><select id="ss_'+date+'">'+hourOpts('12:00')+'</select><span>~</span><select id="se_'+date+'">'+hourOpts('14:00')+'</select><button class="ab" onclick="addSlotD(\''+date+'\')">차단</button></div>';
+      body='<div class="worknote">🟢 근무 (매장 운영시간 기본) · 비근무 시간대만 차단하세요</div>'+avail+
+        '<div class="blk"><div class="blk-t">⛔ 비근무 시간대</div>'+chips+add+'</div>';
+    } else {
+      body='<div class="worknote" style="color:var(--warm)">🔴 전일 휴무</div>';
+    }
+    var save = dirty(date) ? '<div class="daysave"><button class="'+((late&&!!shiftMap[date]&&r.penalty>0)?'pen':'')+'" onclick="saveDay(\''+date+'\')">'+((late&&!!shiftMap[date]&&r.penalty>0)?'벌금 ฿'+r.penalty+' 감수하고 저장':'저장')+'</button></div>' : '';
+    return '<div class="day'+(d.off?' off':'')+(late&&r.penalty>0?' late':'')+'">'+head+body+save+'</div>';
+  }
+
+  function penSection(){
+    var pend=penalties.filter(function(p){return p.status==='pending';});
+    var total=pend.reduce(function(a,p){return a+(p.amount||0);},0);
+    var head='<div class="penbox '+(total?'':'zero')+'"><div class="pen-sum">'+(total?('⚠️ 미납 벌금 ฿'+total):'✅ 벌금 없음')+'</div>';
+    var list = penalties.length ? '<div class="pen-list">'+penalties.slice(0,8).map(function(p){
+      return '<div class="pen-row"><span class="k">'+p.work_date+' · '+(p.reason==='late_edit'?'2일 이내 수정':esc(p.reason||''))+'</span><span class="v">฿'+(p.amount||0)+' <span class="st '+(p.status||'pending')+'">'+({pending:'미납',waived:'면제',paid:'납부'}[p.status]||p.status)+'</span></span></div>';
+    }).join('')+'</div>' : '';
+    return head+list+'</div>';
+  }
 
   function render(){
-    syncDraft();
-    var on=draft.on;
-    var ci='<div class="ci '+(on?'on':'')+'">'+
-      '<div class="ci-row"><div class="t">'+(on?'🟢 오늘 출근':'⚪ 오늘 휴무')+'</div><div class="toggle '+(on?'on':'')+'" onclick="tog()"><div class="k"></div></div></div>'+
-      (on?('<div class="availrow">'+
-        ['shop','outcall','both'].map(function(a){ var lbl={shop:'🏠 샵',outcall:'🚗 출장',both:'샵+출장'}[a]; var dis=(a!=='shop'&&!me.outcall_ok); return '<div class="achip '+(draft.avail===a?'on':'')+(dis?' dis':'')+'" '+(dis?'style="opacity:.4;pointer-events:none"':'onclick="setAvail(\''+a+'\')"')+'>'+lbl+'</div>'; }).join('')+'</div>'+
-        '<div class="hours"><select onchange="setHr(\'start\',this.value)">'+hourOpts(draft.start)+'</select><span>~</span><select onchange="setHr(\'end\',this.value)">'+hourOpts(draft.end)+'</select></div>'):'')+
-      '</div>';
-
-    var list = bookings.slice().sort(function(a,b){ return (a.start_time||'~').localeCompare(b.start_time||'~'); }).map(function(b){
+    var wk=weekDates();
+    var week='<div class="sec"><div class="sec-h">📅 이번 주 스케줄 <span class="hint">근무 기본 · '+rules().cutoff+'일 전까지 무료 수정</span></div>'+wk.map(dayCard).join('')+'</div>';
+    var pens='<div class="sec"><div class="sec-h">💸 내 벌금</div>'+penSection()+'</div>';
+    var list = bookings.slice().sort(function(a,b){ return (a.book_date+(a.start_time||'~')).localeCompare(b.book_date+(b.start_time||'~')); }).map(function(b){
       var svc=byId(services,b.service_id), room=byId(rooms,b.room_id), out=b.location_type==='outcall', serving=b.status==='serving';
       var where = out?('<span class="otag">🚗 출장</span> '+esc(b.address||'')):(room?esc(room.name):'-');
       var tm = b.mode==='reserve'?(b.start_time||''):'NOW';
-      return '<div class="bk '+(serving?'serving':'')+'"><div class="tm"><div class="h">'+tm+'</div><div class="d">'+(svc?svc.duration_min+'분':'')+'</div></div>'+
+      var dt=new Date(b.book_date+'T00:00:00'); var dlbl=(dt.getMonth()+1)+'/'+dt.getDate();
+      return '<div class="bk '+(serving?'serving':'')+'"><div class="tm"><div class="h">'+tm+'</div><div class="d">'+dlbl+(svc?' · '+svc.duration_min+'분':'')+'</div></div>'+
         '<div class="mid"><div class="nick">'+esc(b.nick)+'</div><div class="meta">'+(svc?esc(svc.name)+' · ':'')+where+'</div></div>'+
         '<div class="acts">'+(serving?'<button class="btn sm" onclick="advance(\''+b.id+'\',\'done\')">완료</button>':'<button class="btn sm" onclick="advance(\''+b.id+'\',\'serving\')">시작</button><button class="btn gray sm" onclick="advance(\''+b.id+'\',\'cancelled\')">취소</button>')+'</div></div>';
-    }).join('') || '<div class="empty">오늘 예약이 없어요</div>';
-
-    document.getElementById('content').innerHTML =
-      '<div class="sec"><div class="sec-h">📅 오늘 출근 ('+today()+')</div>'+ci+'</div>'+
-      '<div class="sec"><div class="sec-h">🗓 내 예약 ('+bookings.length+')</div>'+list+'</div>';
+    }).join('') || '<div class="empty">예정된 예약이 없어요</div>';
+    var bks='<div class="sec"><div class="sec-h">🗓 내 예약 ('+bookings.length+')</div>'+list+'</div>';
+    document.getElementById('content').innerHTML = week + pens + bks;
   }
 
   supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
   supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
-  function updateAuth(session){
-    document.getElementById('loginwrap').style.display = session?'none':'flex';
-    if(session){ loadMe(session); }
-  }
-  // realtime
-  supa.channel('quesme-th').on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings'},function(){ if(me) loadDay(); })
-    .on('postgres_changes',{event:'*',schema:'public',table:'qsm_shifts'},function(){ if(me) loadDay(); }).subscribe();
+  function updateAuth(session){ document.getElementById('loginwrap').style.display = session?'none':'flex'; if(session){ loadMe(session); } }
+  supa.channel('quesme-th').on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings'},function(){ if(me) loadAll(); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'qsm_penalties'},function(){ if(me) loadAll(); }).subscribe();
 })();
 </script>
 </body>

@@ -100,6 +100,7 @@
     <div class="tab on" data-t="schedule" onclick="setTab('schedule')">📅 스케줄</div>
     <div class="tab" data-t="bookings" onclick="setTab('bookings')">🗓 예약</div>
     <div class="tab" data-t="pay" onclick="setTab('pay')">💵 입금</div>
+    <div class="tab" data-t="penalty" onclick="setTab('penalty')">⚠️ 벌금</div>
     <div class="tab" data-t="providers" onclick="setTab('providers')">💆 마사지사</div>
     <div class="tab" data-t="rooms" onclick="setTab('rooms')">🚪 룸</div>
     <div class="tab" data-t="services" onclick="setTab('services')">📋 시술</div>
@@ -114,7 +115,7 @@
 (function(){
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var slug = new URLSearchParams(location.search).get('store') || '';
-  var tab='schedule', providers=[], rooms=[], services=[], bookings=[], shop=null;
+  var tab='schedule', providers=[], rooms=[], services=[], bookings=[], shop=null, penalties=[];
   var schedView='room', schedDate, schedBookings=[], schedShifts={};
   function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   schedDate=today();
@@ -138,8 +139,9 @@
       supa.from('qsm_providers').select('*').eq('store_slug',slug).order('sort'),
       supa.from('qsm_rooms').select('*').eq('store_slug',slug).order('sort'),
       supa.from('qsm_services').select('*').eq('store_slug',slug).order('sort'),
-      supa.from('qsm_bookings').select('*').eq('store_slug',slug).eq('book_date',today()).neq('status','cancelled').neq('status','done')
-    ]).then(function(r){ shop=r[0].data; providers=r[1].data||[]; rooms=r[2].data||[]; services=r[3].data||[]; bookings=r[4].data||[];
+      supa.from('qsm_bookings').select('*').eq('store_slug',slug).eq('book_date',today()).neq('status','cancelled').neq('status','done'),
+      supa.from('qsm_penalties').select('*').eq('store_slug',slug).order('work_date',{ascending:false})
+    ]).then(function(r){ shop=r[0].data; providers=r[1].data||[]; rooms=r[2].data||[]; services=r[3].data||[]; bookings=r[4].data||[]; penalties=r[5].data||[];
       document.getElementById('shopName').textContent=(shop&&((shop.names||{}).ko||(shop.names||{}).en))||slug;
       document.getElementById('sub').textContent='QuesMe Massage · '+slug; if(tab==='schedule') loadSched(); else render(); });
   }
@@ -156,8 +158,13 @@
   window.setDate=function(v){ if(v){ schedDate=v; loadSched(); } };
   window.setHours=function(){ var o=v('h_open'), c=v('h_close'); supa.from('qsm_shops').update({open_time:o,close_time:c}).eq('slug',slug).then(function(){ if(shop){shop.open_time=o;shop.close_time=c;} renderSched(); }); };
   function slotIdx(slots,t){ var best=-1; for(var i=0;i<slots.length;i++){ if(slots[i]<=t) best=i; } return best; }
-  function offShiftAt(prov,t){ var s=schedShifts[prov.id]; if(!schedShiftsAny()) return false; if(!s||s.off) return true; return t<hm2min(s.start_time||'00:00') || t>=hm2min(s.end_time||'23:59'); }
-  function schedShiftsAny(){ for(var k in schedShifts) return true; return false; }
+  function offShiftAt(prov,t){   // 근무 디폴트 · 전일휴무(off) · 비근무 시간대(off_slots)
+    var s=schedShifts[prov.id];
+    if(!s) return false;         // 출근표 없음 = 근무
+    if(s.off) return true;       // 전일 휴무
+    var blk=s.off_slots||[]; for(var i=0;i<blk.length;i++){ if(t>=hm2min(blk[i].s) && t<hm2min(blk[i].e)) return true; }
+    return false;
+  }
 
   function renderSched(){
     var slots=schSlots();
@@ -310,6 +317,11 @@
   };
   window.removeQR=function(){ savePay(''); };
   window.confirmPay=function(id){ supa.from('qsm_bookings').update({pay_status:'confirmed'}).eq('id',id).then(function(res){ if(res&&res.error){alert('확인 실패: '+(res.error.message||res.error));return;} load(); }); };
+  // ===== 스케줄 규칙 / 벌금 =====
+  window.saveSched=function(){ var s={cutoffDays:parseInt(v('sc_days'),10)||0, penalty:parseInt(v('sc_pen'),10)||0};
+    supa.from('qsm_shops').update({sched:s}).eq('slug',slug).then(function(res){ if(res&&res.error){alert('저장 실패: '+(res.error.message||res.error));return;} if(shop)shop.sched=s; render(); alert('규칙 저장됨'); }); };
+  window.penSet=function(id,st){ supa.from('qsm_penalties').update({status:st}).eq('id',id).then(function(res){ if(res&&res.error){alert('실패: '+(res.error.message||res.error));return;} load(); }); };
+  window.delPen=function(id){ if(!confirm('이 벌금을 삭제할까요?')) return; supa.from('qsm_penalties').delete().eq('id',id).then(function(){ load(); }); };
   window.viewSlip=function(id){ var bk=byId(bookings,id); if(!bk||!bk.pay_slip){ alert('제출된 슬립이 없어요'); return; }
     document.getElementById('pmodal').innerHTML='<div class="pmh"><div class="t">🧾 송금 슬립 — '+esc(bk.nick)+'</div><button class="x" onclick="closeEdit()">✕</button></div>'+
       '<div style="padding:14px"><img src="'+esc(bk.pay_slip)+'" style="width:100%;border-radius:10px;display:block"></div>'+
@@ -366,6 +378,23 @@
             '<div class="mid"><div class="nm">'+esc(bk.nick)+(prov?' → '+esc(prov.name):'')+'</div><div class="meta">'+(bk.mode==='reserve'?(bk.start_time||''):'NOW')+' · 예약금 ฿'+(bk.deposit||0)+' · '+pm+'</div></div>'+
             '<div class="acts"><button class="ibtn" onclick="viewSlip(\''+bk.id+'\')">슬립</button><button class="ibtn" style="background:var(--teal);color:#fff" onclick="confirmPay(\''+bk.id+'\')">입금확인</button><button class="ibtn warn" onclick="advance(\''+bk.id+'\',\'cancelled\')">취소</button></div></div>';
         }).join(''):'<div class="empty">대기 중인 입금이 없어요</div>');
+    } else if(tab==='penalty'){
+      var sc=(shop&&shop.sched)||{};
+      var byProv={}; penalties.forEach(function(p){ (byProv[p.provider_id]=byProv[p.provider_id]||[]).push(p); });
+      var totalPending=penalties.filter(function(p){return p.status==='pending';}).reduce(function(a,p){return a+(p.amount||0);},0);
+      var RS={late_edit:'2일 이내 수정'}, ST={pending:'미납',waived:'면제',paid:'납부'};
+      b.innerHTML='<div class="addbox"><div class="ttl">⚙️ 스케줄 수정 규칙</div>'+
+          '<div class="two"><input id="sc_days" placeholder="무료 수정 마감(일) 예:2" inputmode="numeric" value="'+(sc.cutoffDays!=null?sc.cutoffDays:2)+'"><input id="sc_pen" placeholder="벌금 ฿ 예:200" inputmode="numeric" value="'+(sc.penalty!=null?sc.penalty:'')+'"></div>'+
+          '<button class="bigbtn" onclick="saveSched()">저장</button>'+
+          '<div style="font-size:11.5px;color:#9aa7a4;margin-top:8px;text-align:center">근무일 N일 전까지 무료, 그 이후 마사지사가 스케줄 수정 시 벌금 부과</div></div>'+
+        '<div class="ttl" style="margin:18px 2px 10px">⚠️ 벌금 현황 · 미납 합계 <b style="color:var(--warm)">฿'+totalPending+'</b></div>'+
+        (penalties.length? Object.keys(byProv).map(function(pid){ var prov=byId(providers,pid); var rows=byProv[pid];
+          var pend=rows.filter(function(p){return p.status==='pending';}).reduce(function(a,p){return a+(p.amount||0);},0);
+          return '<div class="addbox" style="padding:12px 14px">'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><b>'+esc(prov?prov.name:pid.slice(0,6))+(prov&&prov.tier==='pretty'?' ⭐':'')+'</b><span style="font-weight:800;color:'+(pend?'var(--warm)':'var(--teal)')+'">'+(pend?'미납 ฿'+pend:'미납 없음')+'</span></div>'+
+            rows.map(function(p){ return '<div class="row" style="padding:9px 0"><div class="mid"><div class="nm" style="font-size:13.5px">'+p.work_date+' · <span style="font-weight:600;color:var(--muted)">'+(RS[p.reason]||esc(p.reason||''))+'</span></div><div class="meta">฿'+(p.amount||0)+' · '+(ST[p.status]||p.status)+'</div></div><div class="acts">'+(p.status==='pending'?'<button class="ibtn" onclick="penSet(\''+p.id+'\',\'paid\')">납부</button><button class="ibtn" onclick="penSet(\''+p.id+'\',\'waived\')">면제</button>':'<button class="ibtn" onclick="penSet(\''+p.id+'\',\'pending\')">되돌리기</button>')+'<button class="ibtn warn" onclick="delPen(\''+p.id+'\')">삭제</button></div></div>'; }).join('')+
+            '</div>';
+        }).join('') : '<div class="empty">부과된 벌금이 없어요</div>');
     } else {
       b.innerHTML=(bookings.length?bookings.slice().sort(function(a,c){return (a.start_time||'~').localeCompare(c.start_time||'~');}).map(function(bk){
         var svc=byId(services,bk.service_id), prov=byId(providers,bk.provider_id), room=byId(rooms,bk.room_id), out=bk.location_type==='outcall', serving=bk.status==='serving';
@@ -379,7 +408,10 @@
   supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
   supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
   function updateAuth(session){ document.getElementById('loginwrap').style.display=session?'none':'flex'; if(session && slug){ load(); } }
-  supa.channel('qsm-sc-'+slug).on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings',filter:'store_slug=eq.'+slug},function(){ load(); }).subscribe();
+  supa.channel('qsm-sc-'+slug)
+    .on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings',filter:'store_slug=eq.'+slug},function(){ load(); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'qsm_penalties',filter:'store_slug=eq.'+slug},function(){ load(); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'qsm_shifts',filter:'store_slug=eq.'+slug},function(){ if(tab==='schedule') loadSched(); }).subscribe();
 })();
 </script>
 </body>

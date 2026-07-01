@@ -179,9 +179,9 @@
     var act = providers.filter(function(p){ return p.active!==false; });
     return act.filter(function(p){
       if(loc==='outcall' && !p.outcall_ok) return false;
-      if(!shifts.length) return loc==='shop' ? true : !!p.outcall_ok;   // 출근표 미설정 → graceful
-      var s=shiftIdx[p.id]; if(!s || s.off) return false;
-      var av=s.avail||'shop';
+      var s=shiftIdx[p.id];
+      if(s && s.off) return false;             // 전일 휴무
+      var av=(s&&s.avail)||'shop';             // 출근표 없으면 근무(기본 샵)
       return loc==='outcall' ? (av==='outcall'||av==='both') : (av==='shop'||av==='both');
     });
   }
@@ -204,7 +204,13 @@
   function overlaps(aS,aD,bS,bD){ return aS < bS+bD && bS < aS+aD; }
   function roomBusy(roomId,t,dur){ if(!roomId) return false; return dayBookings.some(function(b){ return b.room_id===roomId && b.start_time && overlaps(t,dur,hm2min(b.start_time),b.duration_min||60); }); }
   function provBusy(provId,t,dur){ if(!provId) return false; return dayBookings.some(function(b){ return b.provider_id===provId && b.start_time && overlaps(t,dur,hm2min(b.start_time),b.duration_min||60); }); }
-  function provOnShift(provId,t,dur){ if(!shifts.length) return true; var s=shiftIdx[provId]; if(!s||s.off) return false; return t>=hm2min(s.start_time||'00:00') && (t+dur)<=hm2min(s.end_time||'23:59'); }
+  function provOnShift(provId,t,dur){   // 근무 디폴트 · 전일휴무(off) · 비근무 시간대(off_slots)
+    var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
+    if(t<open || t+dur>close) return false;
+    var s=shiftIdx[provId]; if(!s) return true; if(s.off) return false;
+    var blk=s.off_slots||[]; for(var i=0;i<blk.length;i++){ var bs=hm2min(blk[i].s), be=hm2min(blk[i].e); if(overlaps(t,dur,bs,be-bs)) return false; }
+    return true;
+  }
   function availableSlots(){
     var svc=byId(services,sel.svc); var dur=svc?svc.duration_min:60;
     var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
