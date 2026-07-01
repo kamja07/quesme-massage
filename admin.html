@@ -90,9 +90,9 @@
   // 역할 자동 식별 → 라우팅
   function route(email){
     myEmail=email; var loginId=email.split('@')[0];
-    if(email.indexOf('@guest.quesme.app')>=0){   // 고객 → 둘러보기/예약
+    if(email.indexOf('@guest.quesme.app')>=0){   // 고객 → 쇼케이스
       try{ localStorage.setItem('quesme:nick',loginId); }catch(e){}
-      location.replace('index.html'); return;
+      location.replace('showcase.html'); return;
     }
     supa.from('qsm_staff').select('*').eq('email',email).then(function(r){
       var rows=r.data||[];
@@ -172,7 +172,7 @@
 
   supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
   supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
-  function updateAuth(session){ document.getElementById('loginwrap').style.display=session?'none':'flex'; if(session){ route((session.user&&session.user.email)||''); } }
+  function updateAuth(session){ if(!session){ location.replace('index.html'); return; } document.getElementById('loginwrap').style.display='none'; route((session.user&&session.user.email)||''); }
 })();
 </script>
 </body>

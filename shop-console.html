@@ -408,9 +408,7 @@
   supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
   supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
   function updateAuth(session){
-    var lw=document.getElementById('loginwrap');
-    if(!session){ lw.style.display='flex'; return; }
-    lw.style.display='none';
+    if(!session){ location.replace('index.html'); return; }
     var email=(session.user&&session.user.email)||'', loginId=email.split('@')[0];
     supa.from('qsm_staff').select('role,store_slug').eq('email',email).then(function(r){
       var rows=r.data||[];

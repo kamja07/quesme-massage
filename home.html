@@ -113,7 +113,11 @@
       });
     });
   }
-  chrome(); load();
+  // 로그인 필수: 세션 없으면 통합 로그인으로
+  supa.auth.getSession().then(function(r){
+    if(!(r.data&&r.data.session)){ location.replace('index.html'); return; }
+    chrome(); load();
+  });
 })();
 </script>
 <script src="pwa.js"></script>

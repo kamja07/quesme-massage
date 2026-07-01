@@ -9,85 +9,45 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="app.css">
 <style>
-  .sc{max-width:430px; margin:0 auto; min-height:100%; background:#fff; box-shadow:0 0 40px rgba(0,0,0,.05);}
-  .sheet{max-width:430px !important;}
-  .sc-top{background:var(--teal); color:#fff; padding:16px 18px 18px; position:sticky; top:0; z-index:5;}
-  .sc-top .row1{display:flex; align-items:center; gap:10px;}
-  .sc-top .brand{font-size:21px; font-weight:800;} .sc-top .brand small{font-size:12px;font-weight:700;opacity:.85;margin-left:3px;}
-  .sc-top .langsel{margin-left:auto; background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:9px; padding:6px 8px; font-size:12px; font-family:inherit;}
-  .sc-top .langsel option{color:#16323A;}
-  .sc-top .hl{font-size:18px; font-weight:800; margin-top:12px;}
-  .sc-top .sub{font-size:12.5px; opacity:.92; margin-top:3px;}
-  .sc-top .links{display:flex; gap:8px; margin-top:13px;}
-  .sc-top .links a{flex:1; text-align:center; text-decoration:none; font-size:13px; font-weight:700; border-radius:10px; padding:9px;}
-  .sc-top .links a.l1{background:#fff; color:var(--teal);}
-  .sc-top .links a.l2{background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35);}
-  .grp{padding:16px 16px 4px;}
-  .grp-h{font-size:15px; font-weight:800; color:var(--ink); margin:0 0 12px; display:flex; align-items:center; gap:7px;}
-  .grp-h .cnt{font-size:12px; color:var(--muted); font-weight:700;}
-  .grid{display:grid; grid-template-columns:1fr 1fr; gap:11px;}
-  .pcard{position:relative; border:1px solid #eef3f1; border-radius:16px; padding:16px 12px 14px; cursor:pointer; background:#fff; text-align:center; transition:.12s;}
-  .pcard:hover{border-color:var(--teal-line); box-shadow:0 5px 16px rgba(0,0,0,.06);}
-  .pcard .pic{width:74px; height:74px; border-radius:50%; margin:0 auto 10px; background:var(--teal-l); color:var(--teal); font-weight:800; font-size:30px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 0 2px var(--teal-line);}
-  .pcard.pretty .pic{box-shadow:0 0 0 2px #e6b800;}
-  .pcard .pic img{width:100%; height:100%; object-fit:cover;}
-  .pcard .pnm{font-size:15px; font-weight:800; color:var(--ink);}
-  .pcard .pbio{font-size:11.5px; color:var(--muted); margin-top:3px; min-height:15px; line-height:1.35; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
-  .pcard .pextra{font-size:11.5px; font-weight:800; color:var(--amber); margin-top:5px;}
-  .pcard .ptier{position:absolute; top:10px; left:10px; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;}
-  .ptier.pretty{background:#fff3cd; color:#9a6a00;} .ptier.regular{background:#eef3f1; color:#5f6f6c;}
-  .empty{text-align:center; color:#9aa7a4; padding:50px 20px; font-size:14px;}
-  /* detail modal */
-  .ov{position:fixed; inset:0; z-index:1000; background:rgba(8,18,22,.7); display:none; align-items:flex-end; justify-content:center;}
-  .ov.on{display:flex;}
-  .sheet{background:#fff; border-radius:20px 20px 0 0; width:100%; max-width:620px; max-height:88vh; overflow:auto; padding:0 0 calc(20px + env(safe-area-inset-bottom));}
-  .sheet .hero{background:var(--teal-l); padding:26px 20px 18px; text-align:center; position:relative;}
-  .sheet .hero.pretty{background:#fff8e6;}
-  .sheet .x{position:absolute; top:12px; right:14px; font-size:22px; color:var(--muted); background:none; border:none; cursor:pointer;}
-  .sheet .dpic{width:104px; height:104px; border-radius:50%; margin:0 auto 12px; background:#fff; color:var(--teal); font-weight:800; font-size:42px; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 0 3px var(--teal-line);}
-  .sheet .hero.pretty .dpic{box-shadow:0 0 0 3px #e6b800;}
-  .sheet .dpic img{width:100%;height:100%;object-fit:cover;}
-  .sheet .dnm{font-size:22px; font-weight:800; color:var(--ink);}
-  .sheet .dtags{display:flex; gap:6px; justify-content:center; margin-top:8px; flex-wrap:wrap;}
-  .dtag{font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px;}
-  .dtag.pretty{background:#fff3cd; color:#9a6a00;} .dtag.regular{background:#eef3f1; color:#5f6f6c;}
-  .dtag.out{background:#e6f1fb; color:#185fa5;} .dtag.free{background:var(--teal-l); color:var(--teal);} .dtag.extra{background:#fdecea; color:var(--warm);}
-  .sheet .body{padding:18px 20px 6px;}
-  .sheet .drow{display:flex; gap:10px; padding:11px 0; border-bottom:1px solid #f1f4f3; font-size:14px;}
-  .sheet .drow .k{flex:0 0 80px; color:var(--muted);} .sheet .drow .v{flex:1; color:var(--ink); font-weight:600;}
-  .sheet .cta{padding:14px 20px 0;}
-  .pcard .pstat{font-size:11px; color:var(--teal); font-weight:800; margin-top:3px;}
-  .gallery{position:relative; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; background:#000;}
-  .gslide{flex:0 0 100%; scroll-snap-align:center;}
-  .gslide img{width:100%; display:block; max-height:440px; object-fit:cover;}
-  .gcount{position:absolute; top:12px; left:14px; background:rgba(0,0,0,.55); color:#fff; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; z-index:2;}
-  .namebar{padding:15px 20px; text-align:center; position:relative;}
-  .namebar.pretty{background:#fff8e6;} .namebar.regular{background:var(--teal-l);}
-  .sheet .x{position:absolute; top:12px; right:14px; z-index:3; background:rgba(255,255,255,.85); width:30px; height:30px; border-radius:50%; line-height:1;}
-  .ratecard{margin:10px 20px 0; border:1px solid #eef3f1; border-radius:13px; overflow:hidden;}
-  .ratecard .rt{background:var(--teal-l); color:var(--teal); font-weight:800; font-size:13px; padding:9px 14px;}
-  .ratecard.pretty .rt{background:#fff3cd; color:#9a6a00;}
-  .rrow{display:flex; justify-content:space-between; align-items:center; padding:11px 14px; font-size:14px; border-top:1px solid #f1f4f3;}
-  .rrow b{color:var(--ink); font-size:15px;}
+  .wrap{min-height:100%; display:flex; flex-direction:column; background:var(--teal); max-width:430px; margin:0 auto; box-shadow:0 0 40px rgba(0,0,0,.06);}
+  .wtop{display:flex; padding:14px 16px 0;}
+  .wlang{margin-left:auto; background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:9px; padding:6px 9px; font-size:12px; font-family:inherit;}
+  .wlang option{color:#16323A;}
+  .wmid{flex:1; display:flex; flex-direction:column; justify-content:center; padding:8px 22px 30px; width:100%;}
+  .wbrand{color:#fff; font-size:34px; font-weight:800; letter-spacing:-.5px; text-align:center;}
+  .wbrand small{font-size:15px; opacity:.85; font-weight:700;}
+  .wtag{color:rgba(255,255,255,.95); font-size:15px; text-align:center; margin:8px 0 22px; line-height:1.5;}
+  .wcard{background:#fff; border-radius:20px; padding:22px 20px;}
+  .wcard input{width:100%; padding:14px 16px; border:1.5px solid #d7e2df; border-radius:13px; font-size:16px; font-family:inherit; color:var(--ink); margin-bottom:5px;}
+  .wcard input:focus{outline:none; border-color:var(--teal);}
+  .fhint{font-size:11.5px; color:#9aa7a4; margin:0 4px 11px; line-height:1.4;}
+  .msg{min-height:18px; font-size:12.5px; font-weight:700; margin:2px 2px 12px; text-align:center; color:#9aa7a4;}
+  .msg.bad{color:var(--warm);} .msg.ok{color:var(--teal);}
+  .wcard .bigbtn{margin-bottom:9px;}
+  .wcard .bigbtn.alt{background:var(--teal-l); color:var(--teal);}
+  .wcard .bigbtn:disabled{opacity:.6;}
+  .staffnote{text-align:center; font-size:12px; color:#9aa7a4; margin-top:12px; line-height:1.5;}
 </style>
 </head>
 <body>
-<div class="sc">
-  <div class="sc-top">
-    <div class="row1">
-      <div class="brand">QuesMe <small>Massage</small></div>
-      <select id="lang" class="langsel" onchange="setLang(this.value)">
-        <option value="ko">한국어</option><option value="en">English</option><option value="th">ไทย</option><option value="zh">中文</option><option value="ja">日本語</option><option value="hi">हिन्दी</option><option value="ru">Русский</option>
-      </select>
+<div class="wrap">
+  <div class="wtop"><select id="lang" class="wlang" onchange="setLang(this.value)">
+    <option value="ko">한국어</option><option value="en">English</option><option value="th">ไทย</option><option value="zh">中文</option><option value="ja">日本語</option><option value="hi">हिन्दी</option><option value="ru">Русский</option>
+  </select></div>
+  <div class="wmid">
+    <div class="wbrand">QuesMe <small>Massage</small></div>
+    <div class="wtag" id="tag"></div>
+    <div class="wcard">
+      <input id="uid" maxlength="24" autocapitalize="off" autocomplete="username" autocorrect="off">
+      <div class="fhint" id="idHint"></div>
+      <input id="pw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="fhint" id="pwHint"></div>
+      <div class="msg" id="msg"></div>
+      <button class="bigbtn" id="loginBtn" onclick="doLogin()"></button>
+      <button class="bigbtn alt" id="signupBtn" onclick="doSignup()"></button>
+      <div class="staffnote" id="staffNote"></div>
     </div>
-    <div class="hl" id="hl"></div><div class="sub" id="sub"></div>
-    <div class="links"><a class="l1" id="lkLogin" href="admin.html"></a><a class="l2" id="lkBrowse" href="home.html"></a></div>
   </div>
-  <div id="list"></div>
-</div>
-
-<div class="ov" id="ov" onclick="if(event.target===this)closeDetail()">
-  <div class="sheet" id="sheet"></div>
 </div>
 
 <script src="i18n.js"></script>
@@ -96,104 +56,78 @@
 <script>
 (function(){
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
-  var store = new URLSearchParams(location.search).get('store');
-  if(store){ location.replace('book.html?store='+encodeURIComponent(store)); return; }
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var lang = I18N.detectLang();
+  var STAFF='@thaimate.app', GUEST='@guest.quesme.app';
+  var RE_ID=/^(?=.*[A-Za-z])[A-Za-z0-9]{6,}$/;   // 영문 포함 6자+ (고객 가입용)
+  var RE_PW=/^(?=.*\d)[A-Za-z0-9]{6,}$/;          // 숫자 포함 6자+ (숫자만 or 영문+숫자)
   function t(k){ return I18N.t(lang,k); }
-  function tn(k,n){ return I18N.t(lang,k).replace('{n}',n); }
-  var esc=function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); };
-  var providers=[], shopMap={}, services=[];
+  var uidEl=document.getElementById('uid'), pwEl=document.getElementById('pw'), msgEl=document.getElementById('msg');
+  function msg(m,c){ msgEl.textContent=m||''; msgEl.className='msg '+(c||''); }
+  function idOf(){ return (uidEl.value||'').trim().toLowerCase(); }
 
-  window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} render(); };
-  function shopName(slug){ var s=shopMap[slug]; if(!s) return ''; var n=s.names||{}; return n[lang]||n.en||n.ko||slug; }
-  function shopArea(slug){ var s=shopMap[slug]; return s?(s.area||''):''; }
-
-  function photoOf(p){ return (p.photos && p.photos.length) ? p.photos[0] : (p.avatar||null); }
-  function card(p){
-    var ini=(p.name||'?').trim().charAt(0).toUpperCase();
-    var ph=photoOf(p); var pic=ph?'<img src="'+esc(ph)+'">':esc(ini);
-    var ty=p.tier==='pretty'?'pretty':'regular';
-    var extra=p.price_extra>0?'<div class="pextra">'+tn('spa.extra',p.price_extra)+'</div>':'';
-    var stat=p.age?('<div class="pstat">'+p.age+'세'+(p.height?' · '+p.height+'cm':'')+(p.stats?' · '+esc(p.stats):'')+'</div>'):'';
-    return '<div class="pcard '+ty+'" onclick="openDetail(\''+p.id+'\')">'+
-      '<span class="ptier '+ty+'">'+t('spa.tier.'+ty)+'</span>'+
-      '<div class="pic">'+pic+'</div><div class="pnm">'+esc(p.name)+'</div>'+
-      stat+'<div class="pbio">'+esc(p.bio||shopName(p.store_slug))+'</div>'+extra+'</div>';
-  }
-  function section(title, icon, arr){
-    if(!arr.length) return '';
-    return '<div class="grp"><div class="grp-h">'+icon+' '+title+' <span class="cnt">'+arr.length+'</span></div><div class="grid">'+arr.map(card).join('')+'</div></div>';
-  }
-
-  function render(){
+  function chrome(){
     document.getElementById('lang').value=lang;
-    document.getElementById('hl').textContent=t('show.headline');
-    document.getElementById('sub').textContent=t('show.sub');
-    document.getElementById('lkLogin').textContent=t('show.login');
-    document.getElementById('lkBrowse').textContent=t('show.browse');
-    var pretty=providers.filter(function(p){return p.tier==='pretty';});
-    var regular=providers.filter(function(p){return p.tier!=='pretty';});
-    var html=section(t('spa.tier.pretty')+' 마사지', '⭐', pretty)+section(t('spa.tier.regular')+' 마사지', '💆', regular);
-    document.getElementById('list').innerHTML = html || '<div class="empty">'+t('show.empty')+'</div>';
+    document.getElementById('tag').textContent=t('auth.tag');
+    uidEl.placeholder=t('auth.id'); pwEl.placeholder=t('auth.pw');
+    document.getElementById('idHint').textContent=t('auth.idRule');
+    document.getElementById('pwHint').textContent=t('auth.pwRule');
+    document.getElementById('loginBtn').textContent=t('auth.login');
+    document.getElementById('signupBtn').textContent=t('auth.signup');
+    document.getElementById('staffNote').textContent=t('auth.staffNote');
   }
+  window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} chrome(); msg('',''); };
 
-  window.openDetail=function(id){
-    var p=providers.filter(function(x){return x.id===id;})[0]; if(!p) return;
-    var ini=(p.name||'?').trim().charAt(0).toUpperCase();
-    var ty=p.tier==='pretty'?'pretty':'regular';
-    var photos=(p.photos&&p.photos.length)?p.photos:[];
-    var top;
-    if(photos.length){
-      top='<div class="gallery">'+photos.map(function(u){return '<div class="gslide"><img src="'+esc(u)+'"></div>';}).join('')+'</div>'+
-        (photos.length>1?'<div class="gcount">1 / '+photos.length+'</div>':'')+
-        '<div class="namebar '+ty+'"><div class="dnm">'+esc(p.name)+'</div><div class="dtags">'+dtags(p,ty)+'</div></div>';
-    } else {
-      var pic=p.avatar?'<img src="'+esc(p.avatar)+'">':esc(ini);
-      top='<div class="hero '+ty+'"><div class="dpic">'+pic+'</div><div class="dnm">'+esc(p.name)+'</div><div class="dtags">'+dtags(p,ty)+'</div></div>';
-    }
-    var sh=shopName(p.store_slug), ar=shopArea(p.store_slug);
-    var prof='';
-    if(p.age) prof+='<div class="drow"><span class="k">'+t('prof.age')+'</span><span class="v">'+p.age+'</span></div>';
-    if(p.height) prof+='<div class="drow"><span class="k">'+t('prof.height')+'</span><span class="v">'+p.height+' cm</span></div>';
-    if(p.weight) prof+='<div class="drow"><span class="k">'+t('prof.weight')+'</span><span class="v">'+p.weight+' kg</span></div>';
-    if(p.stats) prof+='<div class="drow"><span class="k">'+t('prof.stats')+'</span><span class="v">'+esc(p.stats)+'</span></div>';
-    // 등급별 요금표
-    var rate=services.filter(function(s){ return s.store_slug===p.store_slug && (s.tier===p.tier || s.tier==='all'); })
-      .sort(function(a,b){ return (a.duration_min||0)-(b.duration_min||0); });
-    var rateHtml = rate.length ? '<div class="ratecard '+ty+'"><div class="rt">'+t('spa.tier.'+ty)+' '+t('prof.rate')+(p.price_extra>0?' · '+t('spa.lblWho')+' '+tn('spa.extra',p.price_extra):'')+'</div>'+
-      rate.map(function(s){ return '<div class="rrow"><span>'+esc(s.name)+' · '+tn('spa.min',s.duration_min)+'</span><b>'+(s.price?'฿'+s.price:'-')+'</b></div>'; }).join('')+'</div>' : '';
-    document.getElementById('sheet').innerHTML=
-      '<button class="x" onclick="closeDetail()">✕</button>'+top+
-      '<div class="body">'+
-        (p.bio?'<div class="drow"><span class="k">'+t('prof.intro')+'</span><span class="v">'+esc(p.bio)+'</span></div>':'')+
-        prof+
-        (sh?'<div class="drow"><span class="k">'+t('prof.shop')+'</span><span class="v">'+esc(sh)+(ar?' · '+esc(ar):'')+'</span></div>':'')+
-        '<div class="drow"><span class="k">'+t('spa.lblWhere')+'</span><span class="v">🏠 '+t('spa.locShop')+(p.outcall_ok?' · 🚗 '+t('spa.locOutcall'):'')+'</span></div>'+
-      '</div>'+ rateHtml +
-      '<div class="cta"><a class="bigbtn" style="display:block;text-align:center;text-decoration:none" href="book.html?store='+encodeURIComponent(p.store_slug)+'&provider='+encodeURIComponent(p.id)+'">'+t('show.book')+'</a></div>';
-    document.getElementById('ov').classList.add('on');
+  function busy(b){ document.getElementById('loginBtn').disabled=b; document.getElementById('signupBtn').disabled=b; }
+
+  // 모든 역할 로그인: 직원/마사지사(@thaimate) 먼저 → 실패 시 고객(@guest)
+  window.doLogin=function(){
+    var id=idOf(), pw=pwEl.value||''; msg('','');
+    if(!id||!pw){ msg(t('auth.fail'),'bad'); return; }
+    busy(true);
+    supa.auth.signInWithPassword({ email:id+STAFF, password:pw }).then(function(r){
+      if(!(r&&r.error)) return;   // 성공 → onAuthStateChange가 라우팅
+      supa.auth.signInWithPassword({ email:id+GUEST, password:pw }).then(function(r2){
+        busy(false);
+        if(r2&&r2.error){ msg(t('auth.fail'),'bad'); }
+      });
+    });
   };
-  function dtags(p,ty){
-    return '<span class="dtag '+ty+'">'+t('spa.tier.'+ty)+'</span>'+
-      (p.price_extra>0?'<span class="dtag extra">'+tn('spa.extra',p.price_extra)+'</span>':'')+
-      (p.outcall_ok?'<span class="dtag out">🚗 '+t('show.outcallOk')+'</span>':'')+
-      (p.freelance?'<span class="dtag free">프리랜서</span>':'');
-  }
-  window.closeDetail=function(){ document.getElementById('ov').classList.remove('on'); };
+  // 신규 고객: 사용가능 확인(가입 시도) → 가능하면 바로 입장
+  window.doSignup=function(){
+    var id=idOf(), pw=pwEl.value||''; msg('','');
+    if(!RE_ID.test(id)){ msg(t('auth.idRule'),'bad'); uidEl.focus(); return; }
+    if(!RE_PW.test(pw)){ msg(t('auth.pwRule'),'bad'); pwEl.focus(); return; }
+    busy(true);
+    supa.auth.signUp({ email:id+GUEST, password:pw }).then(function(r){
+      busy(false);
+      if(r&&r.error){ msg(/registered|exists|already/i.test(r.error.message||'')?t('auth.taken'):(r.error.message||'가입 실패'),'bad'); return; }
+      try{ localStorage.setItem('quesme:nick',id); }catch(e){}   // 성공 → onAuthStateChange가 showcase로
+    });
+  };
 
-  function load(){
-    Promise.all([
-      supa.from('qsm_providers').select('*').eq('active',true).order('tier').order('sort'),
-      supa.from('qsm_shops').select('slug,names,area'),
-      supa.from('qsm_services').select('*').eq('active',true).order('duration_min')
-    ]).then(function(r){
-      providers=r[0].data||[]; shopMap={}; (r[1].data||[]).forEach(function(s){ shopMap[s.slug]=s; });
-      services=r[2].data||[];
-      render();
+  function route(email){
+    var loginId=email.split('@')[0];
+    if(email.indexOf(GUEST)>=0){ try{ localStorage.setItem('quesme:nick',loginId); }catch(e){} location.replace('showcase.html'); return; }
+    supa.from('qsm_staff').select('role,store_slug').eq('email',email).then(function(r){
+      var rows=r.data||[];
+      var admin=rows.filter(function(x){return x.store_slug==='*';})[0];
+      var mgr=rows.filter(function(x){return x.role==='manager' && x.store_slug!=='*';})[0];
+      if(admin){ location.replace('admin.html'); return; }
+      if(mgr){ location.replace('shop-console.html?store='+encodeURIComponent(mgr.store_slug)); return; }
+      supa.from('qsm_providers').select('id').eq('login_id',loginId).limit(1).then(function(p){
+        if(p.data && p.data.length){ location.replace('therapist.html'); return; }
+        msg(t('auth.noperm'),'bad'); busy(false); supa.auth.signOut();
+      });
     });
   }
-  render(); load();
+
+  function updateAuth(session){
+    if(session && session.user){ route(session.user.email||''); }
+    else { chrome(); }
+  }
+  supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
+  supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
 })();
 </script>
 <script src="pwa.js"></script>
