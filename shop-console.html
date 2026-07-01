@@ -393,7 +393,8 @@
         var svc=byId(services,bk.service_id), prov=byId(providers,bk.provider_id), room=byId(rooms,bk.room_id), out=bk.location_type==='outcall', serving=bk.status==='serving';
         var where=out?('🚗 출장 '+esc(bk.address||'')):(room?esc(room.name):'-');
         var payb=bk.deposit?(bk.pay_status==='confirmed'?' · 💵확인':bk.pay_status==='submitted'?' · 🧾확인대기':' · ⏳입금전'):'';
-        return '<div class="bk '+(serving?'serving':'')+'"><div class="tm"><div class="h">'+(bk.mode==='reserve'?(bk.start_time||''):'NOW')+'</div></div><div class="mid"><div class="nick">'+esc(bk.nick)+(prov?' → '+esc(prov.name):'')+'</div><div class="meta">'+(svc?esc(svc.name)+' · ':'')+where+payb+'</div></div><div class="acts">'+(serving?'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'done\')">완료</button>':'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'serving\')">시작</button>')+'<button class="ibtn warn" onclick="advance(\''+bk.id+'\',\'cancelled\')">취소</button></div></div>';
+        var payAct = bk.pay_status==='submitted' ? '<button class="ibtn" style="background:var(--teal);color:#fff" onclick="viewSlip(\''+bk.id+'\')">🧾 입금확인</button>' : '';
+        return '<div class="bk '+(serving?'serving':'')+'"><div class="tm"><div class="h">'+(bk.mode==='reserve'?(bk.start_time||''):'NOW')+'</div></div><div class="mid"><div class="nick">'+esc(bk.nick)+(prov?' → '+esc(prov.name):'')+'</div><div class="meta">'+(svc?esc(svc.name)+' · ':'')+where+payb+'</div></div><div class="acts">'+payAct+(serving?'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'done\')">완료</button>':'<button class="ibtn" onclick="advance(\''+bk.id+'\',\'serving\')">시작</button>')+'<button class="ibtn warn" onclick="advance(\''+bk.id+'\',\'cancelled\')">취소</button></div></div>';
       }).join(''):'<div class="empty">오늘 예약이 없어요</div>');
     }
   }
