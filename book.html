@@ -204,7 +204,8 @@
   function nowMin(){ var d=bkkNow(); return d.getHours()*60+d.getMinutes(); }
   function overlaps(aS,aD,bS,bD){ return aS < bS+bD && bS < aS+aD; }
   function roomBusy(roomId,t,dur){ if(!roomId) return false; return dayBookings.some(function(b){ return b.room_id===roomId && b.start_time && overlaps(t,dur,hm2min(b.start_time),b.duration_min||60); }); }
-  function provBusy(provId,t,dur){ if(!provId) return false; return dayBookings.some(function(b){ return b.provider_id===provId && b.start_time && overlaps(t,dur,hm2min(b.start_time),b.duration_min||60); }); }
+  var REST=30;   // 시술 앞뒤 마사지사 휴식(분) — 예약 사이 최소 30분 간격
+  function provBusy(provId,t,dur){ if(!provId) return false; return dayBookings.some(function(b){ if(b.provider_id!==provId||!b.start_time) return false; var bs=hm2min(b.start_time)-REST, bd=(b.duration_min||60)+REST*2; return overlaps(t,dur,bs,bd); }); }
   function provOnShift(provId,t,dur){   // 근무 디폴트 · 전일휴무(off) · 비근무 시간대(off_slots)
     var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
     if(t<open || t+dur>close) return false;
