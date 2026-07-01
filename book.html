@@ -173,7 +173,8 @@
   var sel={ loc:'shop', svc:null, prov:null, room:null, addr:'', mode:'now', slot:null };
   var step=0, walkinOpen=true, grpOpen={pretty:true, regular:true};
   var OUTCALL_FEE = 300;
-  function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function bkkNow(){ var d=new Date(); return new Date(d.getTime() + d.getTimezoneOffset()*60000 + 7*3600000); }   // 샵 기준 태국시각(UTC+7) — 손님 기기 시간대와 무관하게 '지금'
+  function todayStr(){ var d=bkkNow(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function onShiftProviders(){
     var loc = sel.loc||'shop';
     var act = providers.filter(function(p){ return p.active!==false; });
@@ -200,7 +201,7 @@
   // ---- 가용성(빈자리) 계산: 룸+마사지사+출근+운영시간 ----
   function hm2min(s){ var p=(s||'').split(':'); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); }
   function min2hm(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
-  function nowMin(){ var d=new Date(); return d.getHours()*60+d.getMinutes(); }
+  function nowMin(){ var d=bkkNow(); return d.getHours()*60+d.getMinutes(); }
   function overlaps(aS,aD,bS,bD){ return aS < bS+bD && bS < aS+aD; }
   function roomBusy(roomId,t,dur){ if(!roomId) return false; return dayBookings.some(function(b){ return b.room_id===roomId && b.start_time && overlaps(t,dur,hm2min(b.start_time),b.duration_min||60); }); }
   function provBusy(provId,t,dur){ if(!provId) return false; return dayBookings.some(function(b){ return b.provider_id===provId && b.start_time && overlaps(t,dur,hm2min(b.start_time),b.duration_min||60); }); }
