@@ -72,17 +72,6 @@
 </style>
 </head>
 <body>
-<div class="loginwrap" id="loginwrap">
-  <div class="logincard">
-    <div class="loginh">QuesMe</div>
-    <div class="logint">마사지사 로그인</div>
-    <input id="liId" placeholder="아이디 (샵에서 발급)" autocapitalize="off">
-    <input id="liPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="bigbtn" onclick="doLogin()" id="loginBtn">로그인</button>
-    <div class="loginErr" id="liErr"></div>
-    <div class="loginAlt" id="signupRow" style="display:none">첫 로그인인가요? <a onclick="doSignup()">비밀번호 설정 →</a></div>
-  </div>
-</div>
 
 <div class="th">
   <div class="th-top"><span class="av" id="av"></span><div><div class="nm" id="who">—</div><div class="sub" id="sub"></div></div>
@@ -130,7 +119,7 @@
     var email=(session.user&&session.user.email)||''; var loginId=email.split('@')[0];
     supa.from('qsm_providers').select('*').eq('login_id',loginId).limit(1).then(function(r){
       me=(r.data&&r.data[0])||null;
-      if(!me){ document.getElementById('content').innerHTML='<div class="sec"><div class="empty">이 계정에 연결된 마사지사 정보가 없어요.<br>샵 관리자에게 아이디 등록을 요청하세요.<br><code>'+esc(loginId)+'</code></div></div>'; document.getElementById('who').textContent=loginId; return; }
+      if(!me){ location.replace('admin.html'); return; }   // 마사지사 아님(관리자/매니저/고객) → 통합 로그인이 역할대로 라우팅
       document.getElementById('av').innerHTML = me.avatar?'<img src="'+esc(me.avatar)+'">':esc((me.name||'?').charAt(0).toUpperCase());
       document.getElementById('who').textContent = me.name + (me.freelance?' · 프리랜서':'');
       document.getElementById('sub').textContent = (TIER[me.tier]||'') + (me.outcall_ok?' · 출장 가능':'');
@@ -248,7 +237,7 @@
 
   supa.auth.getSession().then(function(r){ updateAuth(r.data&&r.data.session); });
   supa.auth.onAuthStateChange(function(_e,session){ updateAuth(session); });
-  function updateAuth(session){ document.getElementById('loginwrap').style.display = session?'none':'flex'; if(session){ loadMe(session); } }
+  function updateAuth(session){ if(!session){ location.replace('admin.html'); return; } loadMe(session); }   // 자체 로그인 없음 → 통합 로그인(admin.html)으로
   supa.channel('quesme-th').on('postgres_changes',{event:'*',schema:'public',table:'qsm_bookings'},function(){ if(me) loadAll(); })
     .on('postgres_changes',{event:'*',schema:'public',table:'qsm_penalties'},function(){ if(me) loadAll(); }).subscribe();
 })();
