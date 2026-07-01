@@ -227,13 +227,15 @@
   }
   window.setSlot=function(v){ sel.slot=v; };
   window.pickSlot=function(hm){ sel.slot=hm; render(); };
-  function scheduleSlots(){   // 선택 마사지사(또는 아무나)의 30분 단위 가능 시작시각
+  var MIN_DUR=60;   // 마사지 최소 소요시간 1시간
+  function scheduleSlots(dur){   // 선택 마사지사(또는 아무나)가 dur(분)만큼 통째로 비는 시작시각
+    dur = dur || MIN_DUR;
     var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
     var nm=nowMin(), out=[];
     var provs = sel.prov ? [byId(providers,sel.prov)].filter(Boolean) : onShiftProviders();
     if(!provs.length) return out;
-    for(var ti=Math.max(open, Math.ceil(nm/30)*30); ti+30<=close; ti+=30){
-      if(provs.some(function(p){ return provOnShift(p.id,ti,30) && !provBusy(p.id,ti,30); })) out.push(ti);
+    for(var ti=Math.max(open, Math.ceil(nm/30)*30); ti+dur<=close; ti+=30){   // 소요시간이 운영시간 안에 들어와야
+      if(provs.some(function(p){ return provOnShift(p.id,ti,dur) && !provBusy(p.id,ti,dur); })) out.push(ti);   // 마사지사가 dur만큼 근무·비어있어야
     }
     return out;
   }
@@ -441,10 +443,11 @@
       return;
     }
     if(step===1){   // 시간 테이블(스케줄) + 메뉴
-      var sslots=scheduleSlots();
-      if(sel.slot && sslots.indexOf(hm2min(sel.slot))<0) sel.slot=null;
+      var selSvc=sel.svc?byId(services,sel.svc):null, dur=(selSvc&&selSvc.duration_min)||MIN_DUR;
+      var sslots=scheduleSlots(dur);
+      if(sel.slot && sslots.indexOf(hm2min(sel.slot))<0) sel.slot=null;   // 소요시간에 안 맞으면 해제
       var prov=sel.prov?byId(providers,sel.prov):null;
-      var who = '<div style="font-size:12.5px;color:var(--muted);margin-bottom:9px">'+(prov?'⭐ '+esc(prov.name):t('spa.anyone'))+' · '+t('spa.today')+'</div>';
+      var who = '<div style="font-size:12.5px;color:var(--muted);margin-bottom:9px">'+(prov?'⭐ '+esc(prov.name):t('spa.anyone'))+' · '+t('spa.today')+' · '+(selSvc?tn('spa.min',dur)+' 기준':tn('spa.min',dur)+' 이상 기준')+'</div>';
       var tt = sslots.length
         ? '<div class="ttable">'+sslots.map(function(m){ var hm=min2hm(m); return '<button class="tcell '+(sel.slot===hm?'on':'')+'" onclick="pickSlot(\''+hm+'\')">'+hm+'</button>'; }).join('')+'</div>'
         : '<div class="meta" style="color:var(--warm);padding:6px 0">'+t('spa.noSlotNow')+'</div>';
@@ -453,8 +456,8 @@
         var badge=s.tier==='pretty'?' <span class="rbadge" style="background:#fff3cd;color:#9a6a00">'+t('spa.tier.pretty')+'</span>':'';
         return '<div class="opt '+(sel.svc===s.id?'on':'')+'" onclick="pick(\'svc\',\''+s.id+'\')"><div><div class="nm">'+esc(s.name)+badge+'</div><div class="meta">'+tn('spa.min',s.duration_min)+(s.price?' · <b style="color:var(--teal)">฿'+s.price+'</b>':'')+'</div></div><div class="tick"></div></div>';
       }).join('')||'<div class="meta" style="color:#9aa7a4">—</div>';
-      var body='<div class="sec-h">⏰ '+t('spa.timePick')+'</div>'+who+tt+
-        '<div class="sec-h" style="margin-top:20px">💆 '+t('spa.svc')+'</div><div class="opts">'+menu+'</div>';
+      var body='<div class="sec-h">💆 '+t('spa.svc')+'</div><div class="opts">'+menu+'</div>'+
+        '<div class="sec-h" style="margin-top:20px">⏰ '+t('spa.timePick')+'</div>'+who+tt;
       el.innerHTML=stepWrap(2, t('spa.timeMenu'), body, { back:true, next:t('common.next'), ok:!!(sel.slot&&sel.svc), total:3 });
       return;
     }
