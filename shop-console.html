@@ -26,7 +26,7 @@
   .ibtn{background:#eef3f1;border:none;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;color:#3c4a4d;cursor:pointer;}
   .ibtn.warn{background:#fdecea;color:var(--warm);}
   .tag{font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px;margin-left:4px;}
-  .tag.pretty{background:#fff3cd;color:#9a6a00;} .tag.regular{background:#eef3f1;color:#5f6f6c;} .tag.free{background:#e6f1fb;color:#185fa5;} .tag.out{background:var(--teal-l);color:var(--teal);}
+  .tag.pretty{background:#e6b800;color:#fff;border-radius:50%;padding:0;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;line-height:1;} .tag.regular{background:#eef3f1;color:#5f6f6c;} .tag.free{background:#e6f1fb;color:#185fa5;} .tag.out{background:var(--teal-l);color:var(--teal);}
   .addbox{border:1.5px dashed #d7e2df; border-radius:13px; padding:13px; margin-bottom:14px;}
   .addbox .ttl{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:9px;}
   .addbox input, .addbox select{width:100%; padding:10px; border:1.5px solid #d7e2df; border-radius:9px; font-size:14px; font-family:inherit; margin-bottom:8px;}
@@ -178,7 +178,7 @@
         if(occ[i] && occ[i]!=='x'){ var b=occ[i]; var ty=(byId(providers,b.provider_id)||{}).tier==='pretty'?'pretty':''; var st=b.status==='serving'?'serving':(b.status==='done'?'done':''); var sub=schedView==='provider'?((byId(rooms,b.room_id)||{}).name||(b.location_type==='outcall'?'출장':'')):((byId(providers,b.provider_id)||{}).name||'아무나'); cells+='<td colspan="'+b.__span+'"><div class="gbk '+ty+' '+st+'" onclick="openBk(\''+b.id+'\')"><b>'+esc(b.nick)+'</b><br>'+esc(sub)+'</div></td>'; i+=b.__span; }
         else { var t=slots[i]; var off=(schedView==='provider' && offShiftAt(row,t)); cells+='<td class="gcell'+(off?' off':'')+'"'+(off?'':' onclick="openSlot(\''+row.id+'\','+t+')"')+'></td>'; i++; }
       }
-      return '<tr><th class="rowhead">'+esc(row.name)+(schedView==='provider'&&row.tier==='pretty'?' <span class="tag pretty">프리티</span>':'')+'</th>'+cells+'</tr>';
+      return '<tr><th class="rowhead">'+esc(row.name)+(schedView==='provider'&&row.tier==='pretty'?' <span class="tag pretty">P</span>':'')+'</th>'+cells+'</tr>';
     }).join('');
     document.getElementById('body').innerHTML=
       '<div class="schtop"><button class="daynav" onclick="changeDate(-1)">‹</button>'+
@@ -342,7 +342,7 @@
           var ph=(p.photos&&p.photos.length)?p.photos[0]:(p.avatar||null);
           var stat=p.age?(p.age+'세'+(p.height?'·'+p.height+'cm':'')+(p.stats?'·'+esc(p.stats):'')):'';
           return '<div class="row '+(p.active===false?'off':'')+'"><div class="av '+(p.tier==='pretty'?'pretty':'')+'">'+(ph?'<img src="'+esc(ph)+'">':esc(ini))+'</div>'+
-          '<div class="mid"><div class="nm">'+esc(p.name)+(p.tier==='pretty'?'<span class="tag pretty">프리티</span>':'<span class="tag regular">전문</span>')+(p.freelance?'<span class="tag free">프리</span>':'')+(p.outcall_ok?'<span class="tag out">출장</span>':'')+'</div>'+
+          '<div class="mid"><div class="nm">'+esc(p.name)+(p.tier==='pretty'?'<span class="tag pretty">P</span>':'<span class="tag regular">전문</span>')+(p.freelance?'<span class="tag free">프리</span>':'')+(p.outcall_ok?'<span class="tag out">출장</span>':'')+'</div>'+
           '<div class="meta">아이디 <code>'+esc(p.login_id||'-')+'</code>'+(stat?' · '+stat:'')+(p.photos&&p.photos.length?' · 📷'+p.photos.length:'')+'</div></div>'+
           '<div class="acts"><button class="ibtn" onclick="editProv(\''+p.id+'\')">편집</button><button class="ibtn" onclick="toggleActive(\'qsm_providers\',\''+p.id+'\','+(p.active!==false)+')">'+(p.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_providers\',\''+p.id+'\')">삭제</button></div></div>';
         }).join(''):'<div class="empty">마사지사를 추가하세요</div>');
@@ -351,7 +351,7 @@
       b.innerHTML='<div class="addbox"><div class="ttl">＋ 룸 추가</div><input id="r_name" placeholder="룸 이름 (예: 개인룸 1호)"><div class="two"><select id="r_type"><option value="private">개인룸</option><option value="shared">공용</option><option value="group">단체룸</option></select><input id="r_cap" placeholder="정원 (예:1)" inputmode="numeric"></div><button class="bigbtn" onclick="addRoom()">추가</button></div>'+
         (rooms.length?rooms.map(function(r){ return '<div class="row '+(r.active===false?'off':'')+'"><div class="av">🚪</div><div class="mid"><div class="nm">'+esc(r.name)+'</div><div class="meta">'+(TY[r.type]||r.type)+' · '+(r.capacity||1)+'인</div></div><div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_rooms\',\''+r.id+'\','+(r.active!==false)+')">'+(r.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_rooms\',\''+r.id+'\')">삭제</button></div></div>'; }).join(''):'<div class="empty">룸을 추가하세요</div>');
     } else if(tab==='services'){
-      var STIER={all:'공통',regular:'전문',pretty:'프리티'};
+      var STIER={all:'공통',regular:'전문',pretty:'P'};
       b.innerHTML='<div class="addbox"><div class="ttl">＋ 시술/요금 추가 (시간·옵션·가격 직접 입력)</div><input id="s_name" placeholder="시술/옵션명 (예: 타이 마사지)"><div class="two"><select id="s_tier"><option value="regular">전문 요금</option><option value="pretty">프리티 요금</option><option value="all">공통</option></select><input id="s_dur" placeholder="소요(분) 예:60" inputmode="numeric"></div><input id="s_price" placeholder="가격 ฿ 예:300" inputmode="numeric"><button class="bigbtn" onclick="addSvc()">추가</button></div>'+
         (services.length?services.slice().sort(function(a,c){return (a.tier||'').localeCompare(c.tier||'')||(a.duration_min||0)-(c.duration_min||0);}).map(function(s){ var st=s.tier==='pretty'?'pretty':'regular'; return '<div class="row '+(s.active===false?'off':'')+'"><div class="av">📋</div><div class="mid"><div class="nm">'+esc(s.name)+'<span class="tag '+st+'">'+(STIER[s.tier]||'공통')+'</span></div><div class="meta">'+s.duration_min+'분'+(s.price?' · ฿'+s.price:'')+'</div></div><div class="acts"><button class="ibtn" onclick="toggleActive(\'qsm_services\',\''+s.id+'\','+(s.active!==false)+')">'+(s.active===false?'복귀':'숨김')+'</button><button class="ibtn warn" onclick="del(\'qsm_services\',\''+s.id+'\')">삭제</button></div></div>'; }).join(''):'<div class="empty">시술/요금을 추가하세요</div>');
     } else if(tab==='pay'){
