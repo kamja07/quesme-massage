@@ -8,7 +8,7 @@
 <title>QuesMe Massage · 샵 콘솔</title>
 <link rel="stylesheet" href="app.css">
 <style>
-  .sc{max-width:680px; margin:0 auto; min-height:100%; background:#fff;}
+  .sc{max-width:1024px; margin:0 auto; min-height:100%; background:#fff; box-shadow:0 0 50px rgba(0,0,0,.06);}
   .sc-top{background:var(--ink); color:#fff; padding:13px 18px; display:flex; align-items:center; justify-content:space-between;}
   .sc-top .t1{font-size:16px; font-weight:800;} .sc-top .t2{font-size:11px; opacity:.8;}
   .logoutbtn{background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:700;}
@@ -162,7 +162,13 @@
   function renderSched(){
     var slots=schSlots();
     var rowsArr = schedView==='provider' ? providers.filter(function(p){return p.active!==false;}) : rooms.filter(function(r){return r.active!==false;});
-    var head='<tr><th class="rowhead corner">'+(schedView==='provider'?'마사지사':'룸')+'</th>'+slots.map(function(t){ return '<th class="timehead">'+(t%60===0?min2hm(t):'·')+'</th>'; }).join('')+'</tr>';
+    // 시각 헤더: 정시(:00)만, 두 칸(정시·30분) 가운데에 하나의 시각(colspan=2)
+    var timeHead='';
+    for(var hi=0;hi<slots.length;hi++){ var tt=slots[hi];
+      if(tt%60===0){ var half=(hi+1<slots.length && slots[hi+1]===tt+30); timeHead+='<th class="timehead" colspan="'+(half?2:1)+'">'+min2hm(tt)+'</th>'; }
+      else if(!(hi>0 && slots[hi-1]===tt-30 && slots[hi-1]%60===0)){ timeHead+='<th class="timehead">'+min2hm(tt)+'</th>'; }
+    }
+    var head='<tr><th class="rowhead corner">'+(schedView==='provider'?'마사지사':'룸')+'</th>'+timeHead+'</tr>';
     var bodyRows=rowsArr.map(function(row){
       var rowBk=schedBookings.filter(function(b){ return b.start_time && (schedView==='provider'? b.provider_id===row.id : b.room_id===row.id); });
       var occ={};
