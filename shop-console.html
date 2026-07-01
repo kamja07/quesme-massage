@@ -72,12 +72,12 @@
   .hrset{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); width:100%;}
   .hrset input{width:62px; padding:6px; border:1px solid #d7e2df; border-radius:7px; font-family:inherit; font-size:12px;}
   .gwrap{overflow:auto; max-height:70vh; border:1px solid #eef3f1; border-radius:12px;}
-  .gtable{border-collapse:separate; border-spacing:0;}
-  .gtable td,.gtable th{border-right:1px solid #f0f3f2; border-bottom:1px solid #f0f3f2;}
-  .rowhead{position:sticky; left:0; background:#fbfdfc; z-index:2; min-width:92px; max-width:92px; padding:6px 9px; font-size:12.5px; font-weight:700; text-align:left;}
-  .timehead{font-size:10px; color:var(--muted); font-weight:700; padding:5px 0; min-width:48px; background:#fbfdfc; position:sticky; top:0; z-index:1;}
+  .gtable{border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed;}
+  .gtable td,.gtable th{border-right:1px solid #f0f3f2; border-bottom:1px solid #f0f3f2; overflow:hidden;}
+  .rowhead{position:sticky; left:0; background:#fbfdfc; z-index:2; width:78px; padding:6px 8px; font-size:12px; font-weight:700; text-align:left; white-space:nowrap; text-overflow:ellipsis;}
+  .timehead{font-size:9.5px; color:var(--muted); font-weight:700; padding:5px 0; background:#fbfdfc; position:sticky; top:0; z-index:1;}
   .corner{position:sticky; left:0; top:0; z-index:3; background:#fbfdfc;}
-  .gcell{min-width:48px; height:42px; cursor:pointer; padding:0;}
+  .gcell{height:42px; cursor:pointer; padding:0;}
   .gcell:hover{background:var(--teal-l);}
   .gcell.off{background:repeating-linear-gradient(45deg,#f5f5f3,#f5f5f3 5px,#ececea 5px,#ececea 10px); cursor:default;}
   .gbk{height:40px; border-radius:7px; margin:1px; padding:3px 6px; font-size:10.5px; line-height:1.2; overflow:hidden; cursor:pointer; color:#fff; background:var(--teal);}
@@ -187,7 +187,7 @@
         '<div class="vtog"><button class="'+(schedView==='room'?'on':'')+'" onclick="setSchedView(\'room\')">룸</button><button class="'+(schedView==='provider'?'on':'')+'" onclick="setSchedView(\'provider\')">마사지사</button></div>'+
         '<div class="hrset">운영 <input id="h_open" value="'+((shop&&shop.open_time)||'10:00')+'">~<input id="h_close" value="'+((shop&&shop.close_time)||'22:00')+'"><button class="ibtn" onclick="setHours()">적용</button></div></div>'+
       '<div class="slotinfo">빈 칸 클릭 = 예약 추가 · 칸 클릭 = 시작/완료. 손님 예약은 자동 표시됩니다.</div>'+
-      (rowsArr.length? '<div class="gwrap"><table class="gtable"><thead>'+head+'</thead><tbody>'+bodyRows+'</tbody></table></div>' : '<div class="empty">'+(schedView==='provider'?'마사지사':'룸')+'를 먼저 등록하세요</div>');
+      (rowsArr.length? '<div class="gwrap"><table class="gtable"><colgroup><col style="width:78px">'+slots.map(function(){return '<col>';}).join('')+'</colgroup><thead>'+head+'</thead><tbody>'+bodyRows+'</tbody></table></div>' : '<div class="empty">'+(schedView==='provider'?'마사지사':'룸')+'를 먼저 등록하세요</div>');
   }
 
   window.openSlot=function(rowId,t){
