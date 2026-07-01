@@ -167,12 +167,14 @@
   function savedBlocks(date){ var s=shiftMap[date], b={}; if(s){ if(s.off){ rowSlots().forEach(function(m){b[m]=1;}); } else (s.off_slots||[]).forEach(function(sl){ for(var m=hm2min(sl.s);m<hm2min(sl.e);m+=30) b[m]=1; }); } return b; }
   function blocksToOffslots(b){ var ms=Object.keys(b).map(Number).sort(function(a,c){return a-c;}), out=[], i=0; while(i<ms.length){ var st=ms[i], en=ms[i]+30; while(i+1<ms.length && ms[i+1]===en){ en+=30; i++; } out.push({s:min2hm(st),e:min2hm(en)}); i++; } return out; }
   function dirty(date){ var a=Object.keys(drafts[date].blocks).sort(), b=Object.keys(savedBlocks(date)).sort(); return JSON.stringify(a)!==JSON.stringify(b); }
+  function addsRest(date){ var cur=drafts[date].blocks, prev=savedBlocks(date); return Object.keys(cur).some(function(m){ return !prev[m]; }); }   // 새로 막은(쉬는) 칸이 있으면 true
+  function isFined(date){ var r=rules(); return daysUntil(date)<r.cutoff && r.penalty>0 && dirty(date) && addsRest(date); }   // 2일 이내 + 새로 시간 뺌 → 벌금
 
   window.toggleCell=function(date,m){ var b=drafts[date].blocks; if(b[m]) delete b[m]; else b[m]=1; render(); };
   window.saveAll=function(){
     var r=rules(), wk=weekDates(), dd=wk.filter(dirty);
     if(!dd.length) return;
-    var fined=dd.filter(function(d){ return daysUntil(d)<r.cutoff && !!shiftMap[d] && r.penalty>0; });
+    var fined=dd.filter(isFined);
     if(fined.length){
       var total=fined.length*r.penalty;
       if(!confirm(fined.length+'개 날짜가 근무 '+r.cutoff+'일 이내예요.\n변경 시 벌금 ฿'+total+' ('+fined.length+'일 × ฿'+r.penalty+')이 부과됩니다.\n\n그래도 저장할까요?')) return;
@@ -194,7 +196,7 @@
   function gridSection(){
     var wk=weekDates(), rows=rowSlots(), r=rules();
     var dirtyN=wk.filter(dirty).length;
-    var finedN=wk.filter(function(d){ return dirty(d) && daysUntil(d)<r.cutoff && !!shiftMap[d] && r.penalty>0; }).length;
+    var finedN=wk.filter(isFined).length;
     var notice='<div class="pen-notice">⚠️ 근무일 <b>'+r.cutoff+'일 전까지 무료</b>로 바꾸세요. 그 이후(🔒 표시된 날짜) 변경하면 <b>건당 ฿'+r.penalty+'</b> 벌금이 부과됩니다.</div>';
     var legend='<div class="glegend"><span><i class="work"></i>근무</span><span><i class="rest"></i>비근무</span><span style="margin-left:auto">칸 탭 → 빨강(쉬는 시간)</span></div>';
     var head='<tr><th class="timecol"></th>'+wk.map(function(d){ var dt=new Date(d+'T00:00:00'), late=daysUntil(d)<r.cutoff&&r.penalty>0; return '<th class="'+(late?'late':'')+'">'+(dt.getMonth()+1)+'/'+dt.getDate()+'<span class="wd">'+WD[dt.getDay()]+(daysUntil(d)===0?'·오늘':'')+'</span>'+(late?'<span class="lk">🔒</span>':'')+'</th>'; }).join('')+'</tr>';
