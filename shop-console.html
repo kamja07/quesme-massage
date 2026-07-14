@@ -94,6 +94,7 @@
     <div class="tab" data-t="bookings" onclick="setTab('bookings')">🗓 예약</div>
     <div class="tab" data-t="pay" onclick="setTab('pay')">💵 입금</div>
     <div class="tab" data-t="penalty" onclick="setTab('penalty')">⚠️ 벌금</div>
+    <div class="tab" data-t="store" onclick="setTab('store')">🖼 간판</div>
     <div class="tab" data-t="providers" onclick="setTab('providers')">💆 마사지사</div>
     <div class="tab" data-t="rooms" onclick="setTab('rooms')">🚪 룸</div>
     <div class="tab" data-t="services" onclick="setTab('services')">📋 시술</div>
@@ -109,6 +110,7 @@
   var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
   var slug = new URLSearchParams(location.search).get('store') || '';
   var tab='schedule', providers=[], rooms=[], services=[], bookings=[], shop=null, penalties=[];
+  var storePhotos=null, storeDraft=null;   // 간판 편집 상태
   var schedView='room', schedDate, schedBookings=[], schedShifts={};
   function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   schedDate=today();
@@ -316,6 +318,31 @@
   };
   window.removeQR=function(){ savePay(''); };
   window.confirmPay=function(id){ supa.from('qsm_bookings').update({pay_status:'confirmed'}).eq('id',id).then(function(res){ if(res&&res.error){alert('확인 실패: '+(res.error.message||res.error));return;} load(); }); };
+  // ===== 간판(스토어프론트) =====
+  window.stSet=function(k,v){ if(storeDraft) storeDraft[k]=v; };
+  window.addStorePhoto=function(input){ var f=input.files&&input.files[0]; if(!f) return; if(storePhotos.length>=9){ alert('사진은 최대 9장이에요'); input.value=''; return; }
+    var r=new FileReader();
+    r.onerror=function(){ alert('이미지를 읽지 못했어요'); input.value=''; };
+    r.onload=function(){ var img=new Image();
+      img.onerror=function(){ alert('지원되지 않는 형식이에요 (HEIC 등). JPG/PNG로 올려주세요.'); input.value=''; };
+      img.onload=function(){ var max=900,w=img.width,h=img.height;
+        if(w>h){ if(w>max){h=Math.round(h*max/w);w=max;} } else { if(h>max){w=Math.round(w*max/h);h=max;} }
+        var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+        try{ storePhotos.push(cv.toDataURL('image/jpeg',0.6)); }catch(e){ alert('이미지 처리 실패'); }
+        input.value=''; render();
+      }; img.src=r.result; };
+    r.readAsDataURL(f);
+  };
+  window.rmStorePhoto=function(i){ storePhotos.splice(i,1); render(); };
+  window.saveStore=function(){
+    var feats=(storeDraft.features||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+    var patch={ photos:storePhotos, tagline:storeDraft.tagline||null, promo:storeDraft.promo||null, intro:storeDraft.intro||null, features:feats };
+    supa.from('qsm_shops').update(patch).eq('slug',slug).then(function(res){
+      if(res&&res.error){ alert('저장 실패: '+(res.error.message||res.error)); return; }
+      if(shop){ shop.photos=storePhotos.slice(); shop.tagline=patch.tagline; shop.promo=patch.promo; shop.intro=patch.intro; shop.features=feats; }
+      alert('간판이 저장됐어요');
+    });
+  };
   // ===== 스케줄 규칙 / 벌금 =====
   window.saveSched=function(){ var s={cutoffDays:parseInt(v('sc_days'),10)||0, penalty:parseInt(v('sc_pen'),10)||0};
     supa.from('qsm_shops').update({sched:s}).eq('slug',slug).then(function(res){ if(res&&res.error){alert('저장 실패: '+(res.error.message||res.error));return;} if(shop)shop.sched=s; render(); alert('규칙 저장됨'); }); };
@@ -331,6 +358,28 @@
   function render(){
     var b=document.getElementById('body');
     if(tab==='schedule'){ renderSched(); return; }
+    if(tab==='store'){
+      if(storePhotos===null) storePhotos=((shop&&shop.photos)||[]).slice();
+      if(storeDraft===null) storeDraft={ tagline:(shop&&shop.tagline)||'', promo:(shop&&shop.promo)||'', intro:(shop&&shop.intro)||'', features:(((shop&&shop.features)||[]).join(', ')) };
+      var SL='font-size:12px;font-weight:800;color:var(--muted);margin:14px 0 6px';
+      var cells='';
+      for(var gi=0;gi<9;gi++){
+        if(storePhotos[gi]) cells+='<div style="position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1px solid #eef3f1"><img src="'+esc(storePhotos[gi])+'" style="width:100%;height:100%;object-fit:cover"><button onclick="rmStorePhoto('+gi+')" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:12px;cursor:pointer;line-height:1">✕</button></div>';
+        else if(gi===storePhotos.length) cells+='<label class="addphoto" style="width:100%;height:auto;aspect-ratio:1/1;font-size:26px">＋<input type="file" accept="image/*" style="display:none" onchange="addStorePhoto(this)"></label>';
+        else cells+='<div style="aspect-ratio:1/1;border-radius:10px;background:#fbfdfc;border:1.5px dashed #e2e9e7"></div>';
+      }
+      b.innerHTML='<div class="addbox"><div class="ttl">🖼 매장 간판 — 고객이 보는 첫 화면</div>'+
+        '<div style="'+SL+';margin-top:2px">대표 사진 (최대 9장 · 3×3)</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+cells+'</div>'+
+        '<div style="font-size:11px;color:#9aa7a4;margin-top:7px">이벤트·직원 소개·인테리어 사진을 올리세요 (여러 매장 중 눈에 띄게)</div>'+
+        '<div style="'+SL+'">한 줄 소개(태그라인)</div><input id="st_tag" value="'+esc(storeDraft.tagline)+'" oninput="stSet(\'tagline\',this.value)" placeholder="예: 파타야 나클루아 · 출장 가능 · 개인룸 완비">'+
+        '<div style="'+SL+'">🎁 프로모션 (눈에 띄게 표시됨)</div><input id="st_promo" value="'+esc(storeDraft.promo)+'" oninput="stSet(\'promo\',this.value)" placeholder="예: 첫 방문 20% · 3회 이용 시 1회 무료">'+
+        '<div style="'+SL+'">✨ 특징 (쉼표로 구분)</div><input id="st_feat" value="'+esc(storeDraft.features)+'" oninput="stSet(\'features\',this.value)" placeholder="예: 개인룸, 24시간, 한국어 가능, 출장, 주차">'+
+        '<div style="'+SL+'">🏠 매장 소개</div><textarea id="st_intro" oninput="stSet(\'intro\',this.value)" style="width:100%;min-height:72px;padding:11px;border:1.5px solid #e2e9e7;border-radius:10px;font-family:inherit;font-size:14px">'+esc(storeDraft.intro)+'</textarea>'+
+        '<button class="bigbtn" onclick="saveStore()">간판 저장</button>'+
+        '<a href="shop.html?store='+encodeURIComponent(slug)+'" target="_blank" style="display:block;text-align:center;margin-top:10px;color:var(--teal);font-weight:700;font-size:13.5px">👁 고객이 보는 간판 미리보기 →</a></div>';
+      return;
+    }
     if(tab==='providers'){
       b.innerHTML='<div class="addbox"><div class="ttl">＋ 마사지사 추가 (풀 등록)</div>'+
         '<input id="p_name" placeholder="이름"><div class="two"><input id="p_login" placeholder="로그인 아이디 (예: ploy)" autocapitalize="off"><select id="p_tier"><option value="regular">전문</option><option value="pretty">프리티</option></select></div>'+

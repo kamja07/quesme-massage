@@ -97,16 +97,17 @@
     list.innerHTML = rows.map(function(s){
       var logo = s.logo?'<img src="'+esc(s.logo)+'">':'💆';
       var out = outShops[s.slug] ? '<span class="bdg out">🚗 '+t('spa.locOutcall')+'</span>' : '';
-      return '<a class="scard" href="book.html?store='+encodeURIComponent(s.slug)+'">'+
+      var promo = s.promo ? '<div class="sub" style="color:#9a6a00;font-weight:700;margin-top:3px">🎁 '+esc(s.promo)+'</div>' : '';
+      return '<a class="scard" href="shop.html?store='+encodeURIComponent(s.slug)+'">'+
         '<div class="logo">'+logo+'</div>'+
         '<div class="mid"><div class="nm">'+esc(storeName(s))+'</div>'+
-        '<div class="sub">'+(s.area?areaName(s.area):'')+(s.tagline?' · '+esc(s.tagline):'')+'</div>'+
+        '<div class="sub">'+(s.area?areaName(s.area):'')+(s.tagline?' · '+esc(s.tagline):'')+'</div>'+promo+
         '<div class="badges"><span class="bdg open">'+t('home.noWait')+'</span>'+out+'</div></div></a>';
     }).join('');
   }
 
   function load(){
-    supa.from('qsm_shops').select('*').eq('status','active').then(function(res){
+    supa.from('qsm_shops').select('slug,names,area,tagline,promo,logo,phone,hours,open_time,close_time,status').eq('status','active').then(function(res){
       shops=(res.data||[]).sort(function(a,b){ return (a.slug||'').localeCompare(b.slug||''); });
       chrome(); render();
       // 출장 가능 샵 표시

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0E7A5F">
+<script src="inapp.js"></script>
+<title>QuesMe Massage</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="app.css">
+<style>
+  .sf{max-width:430px; margin:0 auto; min-height:100%; background:#fff; box-shadow:0 0 40px rgba(0,0,0,.05); padding-bottom:84px;}
+  .sf-top{background:linear-gradient(160deg,#12463b,#0e7a5f); color:#fff; padding:18px 18px 20px; position:relative;}
+  .sf-top .row1{display:flex; align-items:center; gap:12px;}
+  .sf-top .lg{width:56px; height:56px; flex:0 0 56px; border-radius:15px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; font-size:28px; overflow:hidden;}
+  .sf-top .lg img{width:100%; height:100%; object-fit:cover;}
+  .sf-top .nm{font-size:21px; font-weight:800; letter-spacing:-.3px;}
+  .sf-top .tag{font-size:13px; opacity:.92; margin-top:3px; line-height:1.45;}
+  .sf-top .lang{position:absolute; top:16px; right:16px; background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:9px; padding:5px 8px; font-size:12px; font-family:inherit;}
+  .sf-top .lang option{color:#16323A;}
+  .sf-meta{display:flex; flex-wrap:wrap; gap:7px; margin-top:13px;}
+  .sf-meta .b{font-size:11.5px; font-weight:800; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.25); padding:4px 10px; border-radius:20px;}
+  .promo{margin:14px 16px 0; background:#fff8e6; border:1px solid #ffe08a; border-radius:14px; padding:13px 15px; display:flex; gap:10px; align-items:flex-start;}
+  .promo .ic{font-size:20px;} .promo .tx{font-size:13.5px; font-weight:700; color:#7a5200; line-height:1.5;}
+  .sec{padding:18px 16px 4px;}
+  .sec-h{font-size:14px; font-weight:800; color:var(--ink); margin:0 0 11px; display:flex; align-items:center; gap:7px;}
+  .gal{display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px;}
+  .gal .cell{aspect-ratio:1/1; border-radius:11px; overflow:hidden; background:var(--teal-l); cursor:pointer; position:relative;}
+  .gal .cell img{width:100%; height:100%; object-fit:cover; display:block;}
+  .gal .cell.empty{display:flex; align-items:center; justify-content:center; color:#b9c9c4; font-size:22px; border:1.5px dashed #dbe6e2; background:#fbfdfc; cursor:default;}
+  .feat{display:flex; flex-wrap:wrap; gap:8px;}
+  .feat .f{font-size:12.5px; font-weight:700; color:var(--teal); background:var(--teal-l); border:1px solid var(--teal-line); padding:7px 12px; border-radius:11px;}
+  .intro{font-size:13.5px; color:#4a5a57; line-height:1.65; white-space:pre-line;}
+  .infolist{border:1px solid #eef3f1; border-radius:13px; overflow:hidden;}
+  .infolist .r{display:flex; gap:10px; padding:12px 14px; font-size:13.5px; border-bottom:1px solid #f1f4f3;}
+  .infolist .r:last-child{border-bottom:none;} .infolist .r .k{flex:0 0 66px; color:var(--muted); font-weight:700;} .infolist .r .v{color:var(--ink); font-weight:600;}
+  .sf-cta{position:fixed; left:0; right:0; bottom:0; background:transparent; z-index:20;}
+  .sf-cta .in{max-width:430px; margin:0 auto; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid #eef3f1; box-shadow:0 -3px 14px rgba(0,0,0,.06);}
+  .sf-cta a{display:block; text-align:center; text-decoration:none; background:var(--teal); color:#fff; font-size:16px; font-weight:800; padding:15px; border-radius:13px;}
+  .empty-note{font-size:12.5px; color:#9aa7a4; text-align:center; padding:8px;}
+  .lb{position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,.93); display:none; align-items:center; justify-content:center;}
+  .lb.on{display:flex;} .lb img{max-width:100%; max-height:100%; object-fit:contain;}
+  .lb .x{position:absolute; top:14px; right:16px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.9); border:none; font-size:20px; cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="sf" id="sf"></div>
+<div class="sf-cta"><div class="in"><a id="bookLink" href="#">✨ <span id="bookLbl"></span></a></div></div>
+<div class="lb" id="lb" onclick="closeLb()"><button class="x" onclick="closeLb()">✕</button><img alt=""></div>
+
+<script src="i18n.js"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+  var slug = new URLSearchParams(location.search).get('store') || 'pattaya-ibalso';
+  var supa = window.supabase.createClient(QUESME_CONFIG.url, QUESME_CONFIG.anonKey);
+  var lang = I18N.detectLang();
+  function t(k){ return I18N.t(lang,k); }
+  var esc=function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); };
+  var shop=null, provCount=0, photos=[];
+
+  window.setLang=function(v){ lang=v; try{localStorage.setItem('quesme:lang',v);}catch(e){} render(); };
+  window.lightbox=function(i){ if(!photos[i])return; var lb=document.getElementById('lb'); lb.querySelector('img').src=photos[i]; lb.classList.add('on'); };
+  window.closeLb=function(){ document.getElementById('lb').classList.remove('on'); };
+
+  function shopName(){ if(!shop) return slug; var n=shop.names||{}; return n[lang]||n.ko||n.en||slug; }
+  function render(){
+    document.getElementById('bookLbl').textContent = t('sf.book');
+    document.getElementById('bookLink').href = 'book.html?store='+encodeURIComponent(slug);
+    if(!shop){ document.getElementById('sf').innerHTML='<div class="sec"><div class="empty-note">'+t('sf.loading')+'</div></div>'; return; }
+    var langSel='<select class="lang" onchange="setLang(this.value)">'+['ko','en','th','zh','ja','hi','ru'].map(function(l){var nm={ko:'한국어',en:'English',th:'ไทย',zh:'中文',ja:'日本語',hi:'हिन्दी',ru:'Русский'}[l];return '<option value="'+l+'"'+(lang===l?' selected':'')+'>'+nm+'</option>';}).join('')+'</select>';
+    var logo = shop.logo?'<img src="'+esc(shop.logo)+'">':'💆';
+    var metaB = [];
+    if(shop.area) metaB.push('📍 '+esc(shop.area));
+    metaB.push('🕒 '+esc(shop.hours||((shop.open_time||'10:00')+'–'+(shop.close_time||'22:00'))));
+    if(provCount) metaB.push('💆 '+t('sf.therapists').replace('{n}',provCount));
+    var top='<div class="sf-top">'+langSel+
+      '<div class="row1"><div class="lg">'+logo+'</div><div><div class="nm">'+esc(shopName())+'</div>'+(shop.tagline?'<div class="tag">'+esc(shop.tagline)+'</div>':'')+'</div></div>'+
+      '<div class="sf-meta">'+metaB.map(function(b){return '<span class="b">'+b+'</span>';}).join('')+'</div></div>';
+    var promo = shop.promo ? '<div class="promo"><span class="ic">🎁</span><span class="tx">'+esc(shop.promo)+'</span></div>' : '';
+    // 3x3 갤러리
+    photos=(shop.photos&&shop.photos.length)?shop.photos.slice(0,9):[];
+    var cells='';
+    for(var i=0;i<9;i++){ cells += photos[i] ? '<div class="cell" onclick="lightbox('+i+')"><img src="'+esc(photos[i])+'"></div>' : '<div class="cell empty">📷</div>'; }
+    var gal='<div class="sec"><div class="sec-h">📸 '+t('sf.gallery')+'</div><div class="gal">'+cells+'</div>'+(photos.length?'':'<div class="empty-note" style="margin-top:8px">'+t('sf.noPhoto')+'</div>')+'</div>';
+    var feats=(shop.features&&shop.features.length)?'<div class="sec"><div class="sec-h">✨ '+t('sf.features')+'</div><div class="feat">'+shop.features.map(function(f){return '<span class="f">'+esc(f)+'</span>';}).join('')+'</div></div>':'';
+    var intro=shop.intro?'<div class="sec"><div class="sec-h">🏠 '+t('sf.about')+'</div><div class="intro">'+esc(shop.intro)+'</div></div>':'';
+    var info='<div class="sec"><div class="sec-h">ℹ️ '+t('sf.info')+'</div><div class="infolist">'+
+      (shop.area?'<div class="r"><span class="k">'+t('sf.area')+'</span><span class="v">'+esc(shop.area)+'</span></div>':'')+
+      '<div class="r"><span class="k">'+t('sf.hours')+'</span><span class="v">'+esc(shop.hours||((shop.open_time||'10:00')+'–'+(shop.close_time||'22:00')))+'</span></div>'+
+      (shop.phone?'<div class="r"><span class="k">'+t('sf.phone')+'</span><span class="v">'+esc(shop.phone)+'</span></div>':'')+
+      '</div></div>';
+    document.getElementById('sf').innerHTML = top + promo + gal + feats + intro + info;
+  }
+
+  Promise.all([
+    supa.from('qsm_shops').select('*').eq('slug',slug).maybeSingle(),
+    supa.from('qsm_providers').select('id',{count:'exact',head:true}).eq('store_slug',slug).eq('active',true)
+  ]).then(function(r){ shop=r[0].data||{slug:slug,names:{}}; provCount=(r[1]&&r[1].count)||0; render(); });
+  render();
+})();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>
