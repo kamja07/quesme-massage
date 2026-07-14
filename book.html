@@ -229,6 +229,14 @@
   window.setSlot=function(v){ sel.slot=v; };
   window.pickSlot=function(hm){ sel.slot=hm; render(); };
   var MIN_DUR=60;   // 마사지 최소 소요시간 1시간
+  function isVenue(){ return !!(store && store.type==='venue'); }   // 룸예약 매장(라운지·노래방·파티룸)
+  function venueSlots(roomId,dur){   // 룸예약: 그 룸이 dur만큼 비는 시작시각
+    dur=dur||60; if(!roomId) return [];
+    var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
+    var nm=nowMin(), out=[];
+    for(var ti=Math.max(open, Math.ceil(nm/30)*30); ti+dur<=close; ti+=30){ if(!roomBusy(roomId,ti,dur)) out.push(ti); }
+    return out;
+  }
   function scheduleSlots(dur){   // 선택 마사지사(또는 아무나)가 dur(분)만큼 통째로 비는 시작시각
     dur = dur || MIN_DUR;
     var open=hm2min((store&&store.open_time)||'10:00'), close=hm2min((store&&store.close_time)||'22:00'); if(close<=open)close=open+12*60;
@@ -304,12 +312,16 @@
     else if(!sel.room){ err.textContent=t('spa.needRoom'); return; }
     if(sel.mode==='reserve' && !sel.slot){ err.textContent=t('spa.noSlot'); return; }
     var svc=byId(services,sel.svc);
-    if(sel.mode==='reserve'){   // 고른 시각이 메뉴 소요시간만큼 실제로 비는지 최종 확인
+    if(sel.mode==='reserve'){   // 고른 시각이 소요시간만큼 실제로 비는지 최종 확인
       var dur=svc?svc.duration_min:60, st=hm2min(sel.slot);
-      var cands=sel.prov?[byId(providers,sel.prov)].filter(Boolean):onShiftProviders();
-      var provFit=cands.some(function(p){ return provOnShift(p.id,st,dur) && !provBusy(p.id,st,dur); });
-      var roomFit=isOut || (sel.room && !roomBusy(sel.room,st,dur));
-      if(!provFit || !roomFit){ err.textContent=t('spa.noSlot'); return; }
+      if(isVenue()){
+        if(!sel.room || roomBusy(sel.room,st,dur)){ err.textContent=t('spa.noSlot'); return; }
+      } else {
+        var cands=sel.prov?[byId(providers,sel.prov)].filter(Boolean):onShiftProviders();
+        var provFit=cands.some(function(p){ return provOnShift(p.id,st,dur) && !provBusy(p.id,st,dur); });
+        var roomFit=isOut || (sel.room && !roomBusy(sel.room,st,dur));
+        if(!provFit || !roomFit){ err.textContent=t('spa.noSlot'); return; }
+      }
     }
     var id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'x'+Math.random().toString(36).slice(2)+Date.now();
     var dep=(store&&store.pay&&store.pay.deposit)?(parseInt(store.pay.deposit,10)||0):0;   // 샵이 정한 예약금
@@ -394,6 +406,14 @@
   function prettyCtx(){ var svc=byId(services,sel.svc), prov=sel.prov?byId(providers,sel.prov):null; return (prov&&prov.tier==='pretty')||(svc&&svc.tier==='pretty'); }
   function allowedRooms(){ var pc=prettyCtx(); return rooms.filter(function(r){ if(r.active===false) return false; return pc? r.type==='private' : true; }); }   // 프리티=개인룸만, 그외(오일 등)=전체
   function eligibleProviders(){ var svc=byId(services,sel.svc), st=svc?svc.tier:null; return onShiftProviders().filter(function(p){ if(st==='pretty') return p.tier==='pretty'; if(st==='regular') return p.tier!=='pretty'; return true; }); }
+  function venueSummary(){   // 룸예약 매장 요약
+    var svc=byId(services,sel.svc), room=byId(rooms,sel.room);
+    return '<div class="wsum">'+
+      '<div class="r"><span class="k">'+t('venue.lblRoom')+'</span><span class="v">'+(room?esc(room.name)+' · '+tn('spa.cap',room.capacity||1):'-')+'</span></div>'+
+      '<div class="r"><span class="k">'+t('venue.lblPkg')+'</span><span class="v">'+(svc?esc(svc.name)+' · '+tn('spa.min',svc.duration_min)+(svc.price?' ฿'+svc.price:''):'-')+'</span></div>'+
+      '<div class="r"><span class="k">'+t('spa.lblWhen')+'</span><span class="v">'+(sel.slot?t('spa.today')+' '+sel.slot:'-')+'</span></div>'+
+      '</div>';
+  }
   function bookSummary(){
     var svc=byId(services,sel.svc), prov=sel.prov?byId(providers,sel.prov):null, room=byId(rooms,sel.room), isOut=sel.loc==='outcall';
     return '<div class="wsum">'+
@@ -431,6 +451,34 @@
     var isRes=sel.mode==='reserve';
     var modeTabs='<div class="modetabs"><button class="mtab '+(!isRes?'on':'')+'" onclick="setMode(\'now\')">'+t('spa.walkin')+'</button>'+
       '<button class="mtab '+(isRes?'on':'')+'" onclick="setMode(\'reserve\')">'+t('spa.reserve')+'</button></div>';
+
+    if(isVenue()){   // ===== 룸예약 매장: 룸 → 패키지 → 시간 (마사지사 없음) =====
+      if(step===0){
+        if(!isRes){
+          var tnow=nowSlotStart();
+          var freeR=rooms.filter(function(r){ return r.active!==false && !roomBusy(r.id,tnow,60); });
+          var vb='<div class="wk-hint"><span class="ic">🎉</span><span>'+t('spa.walkinHint')+'</span></div>'+
+            '<div class="sec-h" style="margin-top:12px">🚪 '+t('venue.roomsNow')+' ('+freeR.length+')</div>'+
+            (freeR.length? '<div class="opts">'+freeR.map(function(r){ return '<div class="opt" style="cursor:default"><div><div class="nm">'+esc(r.name)+'</div><div class="meta">'+tn('spa.cap',r.capacity||1)+'</div></div></div>'; }).join('')+'</div>' : '<div class="meta" style="color:var(--warm);padding:6px 0">'+t('spa.noneNow')+'</div>');
+          el.innerHTML=stepWrap(1, t('spa.when'), modeTabs+vb, {}); return;
+        }
+        el.innerHTML=stepWrap(1, t('spa.when'), modeTabs+'<div class="meta" style="color:var(--muted);padding:8px 2px">'+t('venue.pickNext')+'</div>', { next:t('common.next'), total:3 }); return;
+      }
+      if(step===1){
+        var rmsV=rooms.filter(function(r){return r.active!==false;});
+        if(sel.room && !rmsV.some(function(r){return r.id===sel.room;})) sel.room=null;
+        var roomH='<div class="opts">'+(rmsV.length?rmsV.map(function(r){ var ty=r.type||'private'; return '<div class="opt '+(sel.room===r.id?'on':'')+'" onclick="pick(\'room\',\''+r.id+'\')"><div><div class="nm">'+esc(r.name)+'</div><div class="meta"><span class="rbadge '+ty+'">'+t('spa.room.'+ty)+'</span> '+tn('spa.cap',r.capacity||1)+'</div></div><div class="tick"></div></div>'; }).join(''):'<div class="meta" style="color:#9aa7a4">—</div>')+'</div>';
+        var pkgH='<div class="opts">'+(services.filter(function(s){return s.active!==false;}).map(function(s){ return '<div class="opt '+(sel.svc===s.id?'on':'')+'" onclick="pick(\'svc\',\''+s.id+'\')"><div><div class="nm">'+esc(s.name)+'</div><div class="meta">'+tn('spa.min',s.duration_min)+(s.price?' · <b style="color:var(--teal)">฿'+s.price+'</b>':'')+'</div></div><div class="tick"></div></div>'; }).join('')||'<div class="meta" style="color:#9aa7a4">—</div>')+'</div>';
+        var b1='<div class="sec-h">🚪 '+t('venue.room')+'</div>'+roomH+'<div class="sec-h" style="margin-top:20px">🎫 '+t('venue.package')+'</div>'+pkgH;
+        el.innerHTML=stepWrap(2, t('venue.roomPackage'), b1, { back:true, next:t('common.next'), ok:!!(sel.room&&sel.svc), total:3 }); return;
+      }
+      var svcV=sel.svc?byId(services,sel.svc):null, durV=(svcV&&svcV.duration_min)||60;
+      var vslots=venueSlots(sel.room,durV);
+      if(sel.slot && vslots.indexOf(hm2min(sel.slot))<0) sel.slot=null;
+      var ttV=vslots.length?'<div class="ttable">'+vslots.map(function(m){var hm=min2hm(m);return '<button class="tcell '+(sel.slot===hm?'on':'')+'" onclick="pickSlot(\''+hm+'\')">'+hm+'</button>';}).join('')+'</div>':'<div class="meta" style="color:var(--warm);padding:6px 0">'+t('spa.noSlotNow')+'</div>';
+      el.innerHTML=stepWrap(3, t('spa.timePick'), '<div style="font-size:12.5px;color:var(--muted);margin-bottom:9px">'+t('spa.today')+' · '+tn('spa.min',durV)+'</div>'+'<div class="sec-h">⏰ '+t('spa.timePick')+'</div>'+ttV+venueSummary()+'<div class="err" id="err"></div>', { back:true, book:true, ok:!!sel.slot, total:3 });
+      return;
+    }
 
     if(step===0){   // 언제 + (예약이면) 마사지사 바로 아래
       if(!isRes){ el.innerHTML=stepWrap(1, t('spa.when'), modeTabs+walkinPanel(), {}); return; }

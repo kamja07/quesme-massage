@@ -336,10 +336,10 @@
   window.rmStorePhoto=function(i){ storePhotos.splice(i,1); render(); };
   window.saveStore=function(){
     var feats=(storeDraft.features||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-    var patch={ photos:storePhotos, tagline:storeDraft.tagline||null, promo:storeDraft.promo||null, intro:storeDraft.intro||null, features:feats };
+    var patch={ type:storeDraft.type||'massage', photos:storePhotos, tagline:storeDraft.tagline||null, promo:storeDraft.promo||null, intro:storeDraft.intro||null, features:feats };
     supa.from('qsm_shops').update(patch).eq('slug',slug).then(function(res){
       if(res&&res.error){ alert('저장 실패: '+(res.error.message||res.error)); return; }
-      if(shop){ shop.photos=storePhotos.slice(); shop.tagline=patch.tagline; shop.promo=patch.promo; shop.intro=patch.intro; shop.features=feats; }
+      if(shop){ shop.type=patch.type; shop.photos=storePhotos.slice(); shop.tagline=patch.tagline; shop.promo=patch.promo; shop.intro=patch.intro; shop.features=feats; }
       alert('간판이 저장됐어요');
     });
   };
@@ -360,8 +360,9 @@
     if(tab==='schedule'){ renderSched(); return; }
     if(tab==='store'){
       if(storePhotos===null) storePhotos=((shop&&shop.photos)||[]).slice();
-      if(storeDraft===null) storeDraft={ tagline:(shop&&shop.tagline)||'', promo:(shop&&shop.promo)||'', intro:(shop&&shop.intro)||'', features:(((shop&&shop.features)||[]).join(', ')) };
+      if(storeDraft===null) storeDraft={ type:(shop&&shop.type)||'massage', tagline:(shop&&shop.tagline)||'', promo:(shop&&shop.promo)||'', intro:(shop&&shop.intro)||'', features:(((shop&&shop.features)||[]).join(', ')) };
       var SL='font-size:12px;font-weight:800;color:var(--muted);margin:14px 0 6px';
+      var typeSel='<div style="'+SL+';margin-top:2px">매장 유형</div><div class="two"><button type="button" class="ibtn" style="flex:1;padding:11px;'+(storeDraft.type==='massage'?'background:var(--teal);color:#fff':'')+'" onclick="stSet(\'type\',\'massage\');render()">💆 마사지샵</button><button type="button" class="ibtn" style="flex:1;padding:11px;'+(storeDraft.type==='venue'?'background:var(--teal);color:#fff':'')+'" onclick="stSet(\'type\',\'venue\');render()">🚪 룸예약(라운지·노래방·파티룸)</button></div><div style="font-size:11px;color:#9aa7a4;margin-top:5px">마사지샵=마사지사 지정 예약 · 룸예약=룸+시간 예약</div>';
       var cells='';
       for(var gi=0;gi<9;gi++){
         if(storePhotos[gi]) cells+='<div style="position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1px solid #eef3f1"><img src="'+esc(storePhotos[gi])+'" style="width:100%;height:100%;object-fit:cover"><button onclick="rmStorePhoto('+gi+')" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:12px;cursor:pointer;line-height:1">✕</button></div>';
@@ -369,7 +370,8 @@
         else cells+='<div style="aspect-ratio:1/1;border-radius:10px;background:#fbfdfc;border:1.5px dashed #e2e9e7"></div>';
       }
       b.innerHTML='<div class="addbox"><div class="ttl">🖼 매장 간판 — 고객이 보는 첫 화면</div>'+
-        '<div style="'+SL+';margin-top:2px">대표 사진 (최대 9장 · 3×3)</div>'+
+        typeSel+
+        '<div style="'+SL+'">대표 사진 (최대 9장 · 3×3)</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+cells+'</div>'+
         '<div style="font-size:11px;color:#9aa7a4;margin-top:7px">이벤트·직원 소개·인테리어 사진을 올리세요 (여러 매장 중 눈에 띄게)</div>'+
         '<div style="'+SL+'">한 줄 소개(태그라인)</div><input id="st_tag" value="'+esc(storeDraft.tagline)+'" oninput="stSet(\'tagline\',this.value)" placeholder="예: 파타야 나클루아 · 출장 가능 · 개인룸 완비">'+
